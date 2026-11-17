@@ -1,0 +1,49 @@
+REGEDIT4
+; Jk4Speed registry template: NFS Most Wanted (2005, PC v1.3) settings.
+; Both the 32-bit (Wow6432Node) and the native key are written. No CD key.
+
+[HKEY_LOCAL_MACHINE\Software\Wow6432Node\EA Games\Need for Speed Most Wanted]
+"Install Dir"="Z:\\data\\Jk4Speed\\NFSMW"
+"CD Drive"="Z:\\data\\Jk4Speed\\NFSMW"
+"FirstTime"=dword:00000001
+"SwapSize"="73400320"
+"Language"="English US"
+"g_RacingResolution"=dword:00000003
+"g_VSyncOn"=dword:00000001
+"g_FSAALevel"=dword:00000000
+"g_PerformanceLevel"=dword:00000001
+"g_WorldLodLevel"=dword:00000003
+"g_CarLodLevel"=dword:00000001
+"g_CarEnvironmentMapEnable"=dword:00000003
+"g_CarEnvironmentMapUpdateData"=dword:00000001
+"g_RoadReflectionEnable"=dword:00000003
+"g_MotionBlurEnable"=dword:00000000
+"g_ParticleSystemEnable"=dword:00000001
+"g_OverBrightEnable"=dword:00000001
+"g_RainEnable"=dword:00000001
+"g_TextureFiltering"=dword:00000002
+"g_ShadowDetail"=dword:00000002
+"g_VisualTreatment"=dword:00000001
+
+[HKEY_LOCAL_MACHINE\Software\EA Games\Need for Speed Most Wanted]
+"Install Dir"="Z:\\data\\Jk4Speed\\NFSMW"
+"CD Drive"="Z:\\data\\Jk4Speed\\NFSMW"
+"FirstTime"=dword:00000001
+"SwapSize"="73400320"
+"Language"="English US"
+"g_RacingResolution"=dword:00000003
+"g_VSyncOn"=dword:00000001
+"g_FSAALevel"=dword:00000000
+"g_PerformanceLevel"=dword:00000001
+"g_WorldLodLevel"=dword:00000003
+"g_CarLodLevel"=dword:00000001
+"g_CarEnvironmentMapEnable"=dword:00000003
+"g_CarEnvironmentMapUpdateData"=dword:00000001
+"g_RoadReflectionEnable"=dword:00000003
+"g_MotionBlurEnable"=dword:00000000
+"g_ParticleSystemEnable"=dword:00000001
+"g_OverBrightEnable"=dword:00000001
+"g_RainEnable"=dword:00000001
+"g_TextureFiltering"=dword:00000002
+"g_ShadowDetail"=dword:00000002
+"g_VisualTreatment"=dword:00000001

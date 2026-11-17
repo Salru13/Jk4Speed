@@ -1,0 +1,42 @@
+Jk4Speed for PS4
+
+DRAFT - OWNER DECISION. Nothing below is decided. It copies the JkFlow
+licence pattern so the owner can accept, change or replace each part.
+
+Our own code
+------------
+The code in this repository (the pre-flight probe in probe/, the profile
+and registry templates in templates/ and the scripts) is
+Copyright (c) 2026 XxXJoker13XxX and contributors.
+
+  [OWNER DECISION] Licence for our code. JkFlow uses LGPL-2.1-or-later for
+  its launcher: the GNU Lesser General Public License as published by the
+  Free Software Foundation, version 2.1 or (at your option) any later
+  version. The full text is LICENSES/LGPL-2.1.txt. Until the owner decides,
+  no licence is granted for our code.
+
+Native DXVK
+-----------
+Jk4Speed uses JkFlow's Native DXVK renderer client (d3d9.c988.dll). Our
+changes to DXVK in it: Copyright (c) 2026 XxXJoker13XxX. Free to use, copy,
+change and redistribute, if every release names the author with the line
+"Native DXVK by XxXJoker13XxX". Full terms: LICENSES/Native-DXVK.txt. The
+DXVK base stays zlib/libpng (LICENSES/DXVK-zlib.txt).
+
+  [OWNER DECISION] Whether the source of the Jk4Speed changes to the
+  client is published (JkFlow 1.00 did not publish the Native DXVK source).
+
+Third-party components
+----------------------
+Third-party components keep their own licences. See THIRD_PARTY.md for the
+list and LICENSES/ for the full texts:
+  - Wine and the Wine-based PS4 runtime: LGPL-2.1-or-later. Where to get
+    the source: SOURCES.txt.
+  - DXVK: zlib/libpng
+  - Mesa / RADV: MIT
+Xidi (BSD-3-Clause) and Fusion Fix (GPL-3.0) are not part of Jk4Speed; the
+README links to them.
+
+Jk4Speed contains no files from Electronic Arts. Need for Speed and Need
+for Speed: Most Wanted are trademarks of Electronic Arts. The game is not
+included; you use your own copy. This is an unofficial fan project.

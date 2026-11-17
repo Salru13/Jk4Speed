@@ -1,0 +1,25 @@
+Jk4Speed for PS4: where the source is
+=====================================
+
+DRAFT - OWNER DECISION. Jk4Speed is in development and nothing is
+published yet. This file is filled in when the first package is built.
+
+Wine and the Wine PS4 runtime (with our changes) are licensed under the
+GNU Lesser General Public License 2.1 or later (LICENSES/LGPL-2.1.txt).
+
+Jk4Speed uses the Wine PS4 runtime of JkFlow 1.00. Its source, with our
+changes, is published with JkFlow:
+
+  https://github.com/Salru13/JkFlow (tag v1.00): wine/, title/, mesa/
+
+Changes made for Jk4Speed (to be listed with the first package):
+  - the Wine runtime: none yet
+  - Native DXVK client d3d9.c988.dll: OWNER DECISION whether its source is
+    published (see LICENSE)
+
+Upstream projects
+  Wine:  https://gitlab.winehq.org/wine/wine
+  DXVK:  https://github.com/doitsujin/dxvk
+  Mesa:  https://gitlab.freedesktop.org/mesa/mesa
+  The Wine console ports: https://github.com/plastikman/orbis-win and the
+  repositories listed in JkFlow's SOURCES.txt.
