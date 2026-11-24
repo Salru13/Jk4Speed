@@ -73,4 +73,4 @@ ThirteenAG	Ultimate ASI Loader, MIT licence	https://github.com/ThirteenAG/Ultima
 DXVK	Direct3D to Vulkan (zlib licence)	https://github.com/doitsujin/dxvk
 Wine	Windows compatibility layer (LGPL)	https://www.winehq.org
 GoldHEN	Homebrew enabler for the PS4	https://github.com/GoldHEN/GoldHEN
-prospero runtime	The Wine host runtime on the console
+Wine PS4 runtime of JkFlow 1.00	The Wine runtime on the console	https://github.com/Salru13/JkFlow

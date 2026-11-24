@@ -90,7 +90,7 @@ The lists below are copied exactly as they appear in the pack's `ReadMe.txt` (se
 |---|---|---|
 | LunicAura106 | NFSMW: Upscaled HUD (2026-01-02), the source of JK4SPEED's HD HUD | https://nfsmods.xyz/mod/1096 |
 | elaymm4 | Source images (thanks, as credited by the mod) | https://nfsmods.xyz/mod/1200 |
-| Ariso | Thanks (as credited by the mod) | |
+| Ariso | Thanks (as credited by the mod) | - |
 
 ## NFSMW HD Road Textures
 
@@ -118,7 +118,7 @@ The lists below are copied exactly as they appear in the pack's `ReadMe.txt` (se
 | Wine (the Wine project authors) | Windows compatibility layer | LGPL-2.1-or-later | https://www.winehq.org |
 | Mesa / RADV | Vulkan driver for the console's GPU | MIT | https://gitlab.freedesktop.org/mesa/mesa |
 | GoldHEN team | Homebrew enabler for the PS4 | see its project | https://github.com/GoldHEN/GoldHEN |
-| prospero runtime | The Wine host runtime on the console that JK4SPEED runs in | LGPL-2.1-or-later (Wine parts) | |
+| Wine PS4 runtime of JkFlow 1.00 | The Wine runtime on the console that JK4SPEED runs in | LGPL-2.1-or-later | https://github.com/Salru13/JkFlow |
 | plastikman | orbis-win and his PS4 Wine port, which the runtime is built from | | https://github.com/plastikman |
 | mpereiraesaa | The original Wine console port | | https://github.com/mpereiraesaa |
 

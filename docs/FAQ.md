@@ -71,7 +71,7 @@ No. Settings you change before the first Patch are saved and used from the first
 
 In `/data/Jk4Speed/Saves`, one folder per profile inside `NFS Most Wanted`. To bring a PC save: copy `Documents\NFS Most Wanted` to `USB:/Jk4Speed/saves/`, open Settings > Save games and press the square button Import. Your current saves are backed up first. To take them to a PC: Settings > Save games, cross button Export to USB; the copy goes to `USB:/Jk4Speed/saves/<date>/`. Saves from v1.3 Black Edition work. Saves made with other mods (extra cars, for example) may not load.
 
-## What is Show FPS / ms?
+## What is Settings > Show FPS / ms?
 
 It shows the frames per second and the frame time in ms in the top right corner while you race. Off is fastest.
 
@@ -91,4 +91,8 @@ The corner badge says "Official Build by XxXJoker13XxX" only for a copy that mat
 
 ## Support
 
-JK4SPEED has no contact address. Make a support bundle and share its files with whoever helps you.
+JK4SPEED has no contact address. If something goes wrong:
+
+1. Read this FAQ and Help in JK4SPEED (Square on the Home screen).
+2. Make a support bundle (**Settings > Logs & Support > Save support bundle**) and copy its folder to a PC over FTP.
+3. Open an issue on [GitHub Issues](https://github.com/Salru13/Jk4Speed/issues): say what you did and what you saw, and attach the support bundle files.

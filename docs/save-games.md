@@ -8,8 +8,6 @@ JK4SPEED runs Most Wanted PC v1.3 Black Edition on the console. The game keeps i
 
 The game's "My Documents" is redirected to `/data/Jk4Speed/Saves`, so the saves sit next to the game, not inside a hidden system folder.
 
-**Saves from the older launcher (r3):** on the first open the launcher copies them once into the folder above, when the new folder has no profile yet. They are copied, never moved: the old folder stays as it was. A second copy is never made.
-
 The launcher shows this path in **SETTINGS > SAVE GAMES**. The folder exists but stays empty until the game saves for the first time; the screen then says "No saves yet". An import creates the folder when it is missing.
 
 Saves from **v1.3 Black Edition** are supported. Saves made with other mods (extra cars, for example) may not load.
@@ -29,7 +27,7 @@ Saves from **v1.3 Black Edition** are supported. Saves made with other mods (ext
 
 Before anything changes, your current console saves are backed up by the launcher. The import is built next to the real folder, every save in it is checked, and only then is it swapped in. If the console loses power in the middle, the next start of the launcher puts the folder right.
 
-What "checked" means: the file has the save header (`20CM`), the right size (63,596 bytes for v1.3), and all four checksums hold (three CRCs in the header and the MD5 at the end; `docs/launcher/2026-11-23-save-format.md`).
+What "checked" means: the file has the save header (`20CM`), the right size (63,596 bytes for v1.3), and all four checksums hold (three CRCs in the header and the MD5 at the end).
 
 ## Player name (rename a profile)
 
@@ -44,8 +42,3 @@ The game asks for a name when you make a profile, but there is no on-screen keyb
 **SETTINGS > SAVE GAMES**, ✕ **Export to USB**. The copy lands in `USB:/Jk4Speed/saves/<date>/NFS Most Wanted/`. An export never overwrites an earlier one. On the PC, copy the profile folders into `Documents\NFS Most Wanted\`.
 
 Without a USB drive: copy the folder by FTP into the path above (game closed).
-
-## Status
-
-- The path is confirmed on the console (pre-check 2026-11-23, `docs/launcher/2026-11-23-console-prechecks.md`): the folder is there and empty until the first save.
-- The save layout and the rename recipe come from `speed.exe` and a real save (`docs/launcher/2026-11-23-save-format.md`); the launcher reproduces the doc's test vector (`NAME` → `Joker`, SHA-256 `8c3ccdcb…`). Loading a renamed save in the game on the console is still to be tried.

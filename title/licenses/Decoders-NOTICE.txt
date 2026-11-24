@@ -28,4 +28,4 @@ jk_lzma.c     LZMA and LZMA2 decoder, written for JK4SPEED (LGPL-2.1-or-later) f
 jk_7z.c, jk_zip.c, jk_ups.c, jk_md5.c
               Written for JK4SPEED (LGPL-2.1-or-later) from the published formats
               (7z, ZIP APPNOTE, byuu's UPS, RFC 1321).
-jk_keyboard.c Taken from the Blur launcher (same authors, LGPL-2.1-or-later).
+jk_keyboard.c Taken from the JkFlow launcher (same authors, LGPL-2.1-or-later).

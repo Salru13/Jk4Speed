@@ -1,7 +1,7 @@
 # Licences
 
 This page lists what ships inside the JK4SPEED PKG and under which licence, what JK4SPEED does **not** ship
-and why, and the licence of JK4SPEED's own code. The licence texts also ship inside the PKG under `licenses/`.
+and why, and the licence of JK4SPEED's own code. The licence texts are in [LICENSES/](LICENSES/) and also ship inside the PKG under `licenses/LICENSES/`.
 Credits are in [CREDITS.md](CREDITS.md).
 
 ## 1. What ships in the PKG
@@ -9,7 +9,7 @@ Credits are in [CREDITS.md](CREDITS.md).
 | Component | File(s) in the PKG | Licence | Text |
 |---|---|---|---|
 | JK4SPEED launcher, patcher, archive readers, save tools (ours) | `eboot.bin` (launcher compiled in), `jk4speed-files/deltas/*.jkd`, configs | LGPL-2.1-or-later | [LGPL-2.1](https://www.gnu.org/licenses/old-licenses/lgpl-2.1.html) |
-| Native DXVK client changes (ours) | `jk4speed-files/d3d9.dll`, `dxvknative.prx` | Native DXVK licence (draft, credit licence) on top of DXVK's zlib/libpng | [below](#native-dxvk-licence-draft) |
+| Native DXVK client changes (ours) | `jk4speed-files/d3d9.dll`, `dxvknative.prx` | Native DXVK licence (free to use with credit) on top of DXVK's zlib/libpng | [below](#native-dxvk-licence) |
 | DXVK 1.10.3 (base of Native DXVK) | inside `d3d9.dll` | zlib/libpng | [below](#dxvk-zliblibpng) |
 | Wine (the PS4 Wine runtime, Wine 11.17 base) | `sce_module/*.prx`, `win/` | LGPL-2.1-or-later | [Wine licence](https://gitlab.winehq.org/wine/wine/-/blob/master/LICENSE), [LGPL-2.1](https://www.gnu.org/licenses/old-licenses/lgpl-2.1.html) |
 | Mesa / RADV | `sce_module/libvulkan.prx` | MIT (most of Mesa; each source file's SPDX identifier governs) | [Mesa licence](https://docs.mesa3d.org/license.html) |
@@ -21,6 +21,23 @@ Credits are in [CREDITS.md](CREDITS.md).
 
 The PKG is built by JK4SPEED. GoldHEN is **not** part of the PKG; you install it yourself.
 
+The full licence texts, one file each, are in [LICENSES/](LICENSES/):
+
+| File | For |
+|---|---|
+| `LGPL-2.1.txt` | Our code and the Wine PS4 runtime |
+| `Wine-LICENSE.txt` | Wine |
+| `Mesa-MIT.txt` | Mesa / RADV |
+| `DXVK-zlib.txt` | DXVK 1.10.3, the base of Native DXVK |
+| `Native-DXVK.txt` | Our changes in Native DXVK |
+| `UltimateASILoader-LICENSE.txt` | Ultimate ASI Loader |
+| `Xidi-LICENSE.txt` | Xidi |
+| `XenonEffects-LICENSE.txt` | Xenon Effects |
+| `UbuntuFont-LICENCE.txt` | Ubuntu Sans font |
+| `Decoders-NOTICE.txt` | The launcher's archive decoders (DEFLATE, LZMA) |
+
+TweetNaCl, used by the launcher to check the Official Build signature, is public domain.
+
 ## 2. What is NOT shipped, and why
 
 | Not shipped | Author | Why |
@@ -29,7 +46,6 @@ The PKG is built by JK4SPEED. GoldHEN is **not** part of the PKG; you install it
 | Xbox 360 Stuff Pack v4.2 (`X360Stuff.asi`, compiled shaders, textures, VLT edits, sky and road data) | elaymm4 and the pack's authors | **No licence for redistribution.** The pack's readme states none. The pack folder does contain a `LICENSE` file, but it is a BSD 3-Clause text with the notice "Copyright (c) 2019, Electronic Arts", which does not name the pack's authors and does not clearly cover their work; we do not rely on it. Redistributing would need the authors' permission. You download the pack from https://nfsmods.xyz/mod/1200. |
 | NFSMW: Upscaled HUD textures | LunicAura106 | **No licence stated; author permission required** to redistribute. You download it from https://nfsmods.xyz/mod/1096. |
 | NFSMW HD Road Textures | N4SRazer | **No licence stated; author permission required** to redistribute. You download it from https://www.nfsaddons.com/downloads/nfsmw/tools/5410/nfsmw-hd-road-textures.html. |
-| NFS Most Wanted Fusion Fix | ThirteenAG (GPL-3.0) | Not used by this release. |
 
 JK4SPEED reads these archives on your console, checks them by SHA-256 and applies them to your own copy of the
 game. Nothing from them leaves your console.
@@ -157,9 +173,9 @@ freely, subject to the following restrictions:
 
 Source: https://github.com/doitsujin/dxvk
 
-### Native DXVK licence (draft)
+### Native DXVK licence
 
-**Draft, pending owner confirmation.** Applies to our changes to DXVK in the Native DXVK client and the native
+Applies to our changes to DXVK in the Native DXVK client and the native
 renderer it talks to. The DXVK 1.10.3 code they are built from stays under zlib/libpng.
 
 ```
@@ -215,9 +231,9 @@ Full text: https://ubuntu.com/legal/font-licence (also in the PKG next to the fo
 
 | What | Licence |
 |---|---|
-| JK4SPEED launcher, patcher, archive readers (`jk_*`), delta tools and scripts | **LGPL-2.1-or-later**, per the release design (SPDX headers `LGPL-2.1-or-later`, "Copyright 2026 XxXJoker13XxX and contributors"). Confirmed by the owner on 2026-11-24. |
-| Native DXVK changes | Native DXVK licence (draft above), pending owner confirmation |
-| JK4SPEED name, wordmark and icon | Not covered by the code licences. Forks are welcome under the code licences, but must use their own name and must not present themselves as official JK4SPEED builds (brand terms pending owner decision). |
+| JK4SPEED launcher, patcher, archive readers (`jk_*`), delta tools and scripts | **LGPL-2.1-or-later** (SPDX headers, Copyright 2026 XxXJoker13XxX and contributors) |
+| Native DXVK changes | Native DXVK licence (above) |
+| JK4SPEED name, wordmark and icon | Not covered by the code licences. Forks are welcome under the code licences, but must use their own name and must not present themselves as official JK4SPEED builds (see [LICENSE](LICENSE)). |
 
 The LGPL lets you study, change and redistribute our code. If you redistribute a modified version, keep our
 copyright notices, mark your changes, pass on the licence and offer the source.

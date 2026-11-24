@@ -1,27 +1,27 @@
 # Jk4Speed launcher UI: integration guide
 
-For the lead, who owns the title, Wine, DXVK and the package. The branch holds the launcher UI and its file logic only; nothing here changes the engine (engine 1.0 is locked: `docs/release/engine-1.0-manifest.md`). This page lists what the title must provide, what the launcher writes where, and what the package must ship.
+For the lead, who owns the title, Wine, DXVK and the package. The branch holds the launcher UI and its file logic only; nothing here changes the engine. This page lists what the title must provide, what the launcher writes where, and what the package must ship.
 
-Design: `docs/superpowers/specs/2026-11-17-jk4speed-launcher-design.md`, updated by the owner decisions of 2026-11-23 (`docs/launcher/2026-11-23-launcher-kickoff.md`, D1-D6). Release signing (not built yet): `docs/launcher/2026-11-23-release-signing-design.md`. Every screen: `launcher/golden/*.png`. Console test script: `docs/launcher/2026-11-23-launcher-console-test.md`.
+Every screen: `launcher/golden/*.png`.
 
 ## Status
 
-Launcher r4. The folder layout, the mods engine, the Wine prefix seed and the config composer are in the launcher; the title passes the services below. Player pages: `docs/launcher/README-player.md`, `FAQ.md`, `MODS.md`, `save-games.md` (shipped in the package under `docs/`; `test_no_prospero.sh` keeps the runtime's internal name out of them).
+The folder layout, the mods engine, the Wine prefix seed and the config composer are in the launcher; the title passes the services below. Player pages: `README-player.md` (repository root), `docs/FAQ.md`, `docs/MODS.md`, `docs/save-games.md` (shipped in the package under `docs/`).
 
 | Part | Launcher side | Title / package side |
 |---|---|---|
 | PLAY / PATCH / SETTINGS (FRAME RATE, SHOW FPS / MS, MODS, CONTROLS, SAVE GAMES, LOGS & SUPPORT, ABOUT), Help (4 pages), "Patch was interrupted", "Mods can't be changed", Start failed, Restore and Import dialogs | Done, host-tested, golden images | **Wired** (`launcher/title/`): `jk_title_launcher()` replaces the bench start page |
-| Folder layout (`jk_layout`) | `/data/Jk4Speed/{NFSMW,Saves,Mods,Logs,devtools}` and `System/{prefix,backup,modset,state,cache,profiles}`; game folder found case-insensitively, two spellings refused; the first open moves r3 state aside (`System/legacy-r3`) and deletes nothing | `jk_title_layout()` runs it right after the `/data` grant |
+| Folder layout (`jk_layout`) | `/data/Jk4Speed/{NFSMW,Saves,Mods,Logs,devtools}` and `System/{prefix,backup,modset,state,cache,profiles}`; game folder found case-insensitively, two spellings refused; the first open moves state of an older launcher aside (`System/legacy-r3`) and deletes nothing | `jk_title_layout()` runs it right after the `/data` grant |
 | Patcher | Check, install, verify, restore, backup; free-space check; cleanup list `System/state/cleanup.txt`; seeds the Wine prefix (`jk_seed`) | `launcher/title/make_pkg.sh` ships `jk4speed-files/` + manifest + `seed/` |
 | Mods (X360 Stuff Pack, Upscaled HUD, HD Road Textures) | Drop folders `/data/Jk4Speed/Mods` and `<usb>/Jk4Speed/`; each mod is its own switch, any of the 8 combinations. The first PATCH keeps pristine copies (`System/backup/pristine/` + `pristine.txt`, accepted only at the vanilla hashes); every PATCH rebuilds every managed path from pristine + the ON layers in staging, verifies, swaps atomically and journals (`jk_modset`) | Only our deltas and Xenon Effects (MIT) in the package, never game, pack or mod-author data |
 | Config composer (`jk_config`) | Writes `<game_dir>/jk4speed-dev.ini` and `System/profiles/nfsmw.profile` from the two shipped bases; FRAME RATE, SHOW FPS / MS and ENABLE LOGS change keys in them | Nothing: the client and the runtime read them |
-| Saves | Redirected to `/data/Jk4Speed/Saves` by the seeded prefix; import / export / rename; r3 saves copied once | Pass `saves_dir`, `old_saves_dir`, `usb_dir` |
+| Saves | Redirected to `/data/Jk4Speed/Saves` by the seeded prefix; import / export / rename; saves of an older launcher copied once | Pass `saves_dir`, `old_saves_dir`, `usb_dir` |
 | Logs & Support | Enable logs, Clear logs, support bundle in `Logs/support/<stamp>` (+ USB) | Give `logs_dir`, `usb_dir`, `wall_time`, `local_user`; session logs in `Logs` |
 | `free_bytes` | Before PATCH: pristine copies and the prefix | `jk_host_free_probe` (`_fstatfs`) |
 | Release badge, About | Stub driven by `JkServices.release` (NULL: "Unofficial build") | Pass NULL until `jk_verify` exists |
 | Title + PKG | | `launcher/title/README.md`; id `JKSP00001`, name JK4SPEED |
 
-Not tested on hardware unless the console reports say so. The host tests cover the logic and every pixel; the console run follows `docs/launcher/2026-11-23-launcher-console-test.md`.
+Not tested on hardware unless the console reports say so. The host tests cover the logic and every pixel; the console run is a manual check.
 
 ## Build
 
@@ -63,7 +63,7 @@ if (rc == 0 && d.action == JK_START_GAME) {
 | `files_dir` | yes | the package's `jk4speed-files/` (`/app0/jk4speed-files`) |
 | `profiles_dir` | yes | `/data/Jk4Speed/System/profiles` |
 | `saves_dir` | | `/data/Jk4Speed/Saves/NFS Most Wanted` |
-| `old_saves_dir` | | the r3 save folder, read once for the copy |
+| `old_saves_dir` | | the older launcher's save folder, read once for the copy |
 | `usb_dir` | | the root of a mounted USB drive, or NULL |
 | `free_bytes(ctx, path)` | | free bytes on the volume of `path`; `<0` unknown (PATCH proceeds and logs it) |
 | `release`, `build_id` | | NULL / e.g. `JK4SPEED 1.0` |
@@ -92,7 +92,7 @@ Suggested, as in JkFlow: before starting Wine write `<data_root>/state/starting`
 | Path | When | What |
 |---|---|---|
 | `/data/Jk4Speed/{Saves,Mods,Logs,Logs/support,devtools}`, `System/{prefix,backup,modset,state,cache,profiles}` | first open | the folders (`jk_layout_make`); never the game folder |
-| `System/legacy-r3/<name>` | first open on an r3 console | r3's `logs, modset, state, backup, registry, support`, moved by rename; never read as an r4 install record; no bench file is touched |
+| `System/legacy-r3/<name>` | first open on a console with an older launcher | the older launcher's `logs, modset, state, backup, registry, support`, moved by rename; never read as an install record; no bench file is touched |
 | `<game_dir>/<our files>` | PATCH | allow-listed names only (`d3d9.dll`, `dinput8.dll`, `dsound.dll`, `Xidi.32.dll`, `Xidi.ini`, `dxvk.conf`, `jk4speed-dev.ini`, `scripts/*.asi|cfg|ini|tpk`) via `<name>.jk4new` + sha256 + rename |
 | `<game_dir>/jk4speed-dev.ini` | PATCH, PLAY, and every settings change (FRAME RATE, SHOW FPS / MS, ENABLE LOGS), only once an install record for this game folder exists (before the first PATCH a settings change goes to `System/state/launcher.ini` only); its content depends on FRAME RATE, ENABLE LOGS and devtools | a `jk4speed-dev.ini` that is not ours (nor the hash last written) is copied first to `System/backup/jk4speed-dev.ini`, or, when that backup exists, to `System/backup/kept/jk4speed-dev.ini[.N]`; the hash written goes to `System/state/composed.txt`. Composed from `jk4speed.ini.base`: release keys written as `0` (`DXVK_PS4_AUTOTEST`, `FRAME_LOG`, `NFS_TIMING`, `NFS_GTPROF`, `CS_PROFILE`, `RACE_LOCK`, `NATIVE_PIN_STAMP`), `DXVK_PS4_NFS_PACE=30|60`; with Enable logs on, `DXVK_PS4_FRAME_LOG=1` |
 | `System/profiles/nfsmw.profile` | PATCH, PLAY, and every settings change (FRAME RATE, SHOW FPS / MS, ENABLE LOGS), only once an install record for this game folder exists; its content depends on SHOW FPS / MS and ENABLE LOGS | hash written to `System/state/composed.txt`; composed from `nfsmw.profile.base`; `winedebug = -all`; env `DXVK_PS4_FPS_HUD=0|fps`, `DXVK_LOG_LEVEL=none`, `DXVK_STATE_CACHE_PATH=/data/Jk4Speed/System/cache`, `DXVK_PS4_NATIVE_SERVER_CPU=38`. With Enable logs on: `winedebug = +tid,err+all,+loaddll`, `DXVK_LOG_LEVEL=info`, `DXVK_PS4_LOG_DIR=/data/Jk4Speed/Logs` |
@@ -107,11 +107,11 @@ Suggested, as in JkFlow: before starting Wine write `<data_root>/state/starting`
 | `/data/Jk4Speed/clean-test/System/...` | devtools clean-test runs only | the whole state above (backup, modset, state, cache, the launcher log) for a game folder under `clean-test/` (`jk_host_data_root`); the prefix and `System/profiles` stay shared. The override is refused when any part of the path or `clean-test/System` is a link (lstat) |
 | `Logs/support/<stamp>/`, `<usb>/Jk4Speed-support/<stamp>/` | Save bundle | logs + `MANIFEST.txt` |
 | `Logs/*` | ENABLE LOGS on | the game's logs; CLEAR LOGS deletes the logs and the bundles, nothing else |
-| `/data/Jk4Speed/Saves/NFS Most Wanted/...` | Import saves, r3 migration | after `System/backup/saves/<stamp>/` |
+| `/data/Jk4Speed/Saves/NFS Most Wanted/...` | Import saves, migration of older saves | after `System/backup/saves/<stamp>/` |
 | `<usb>/Jk4Speed/saves/<stamp>/NFS Most Wanted/` | Export saves | a copy (never over an older export) |
 | `System/state/launcher.log` (+ `.1`) | always | launcher events, 256 KB, one rotation |
 
-It never writes `speed.exe`. In the game folder it writes only its own allow-listed files, the composed `jk4speed-dev.ini` and the mod-managed paths in the table above (`GLOBAL/*`, `TRACKS/STREAML2RA.BUN`, `scripts/*`, `FX/COMPILED/*.fx.o`: rebuilt from the player's own untouched files and the player's mod downloads). It never deletes a file it did not make (those go to `System/backup/kept/`), never writes to the r3 runtime folders (it reads the old save folder once), never ships game files and never uses the network.
+It never writes `speed.exe`. In the game folder it writes only its own allow-listed files, the composed `jk4speed-dev.ini` and the mod-managed paths in the table above (`GLOBAL/*`, `TRACKS/STREAML2RA.BUN`, `scripts/*`, `FX/COMPILED/*.fx.o`: rebuilt from the player's own untouched files and the player's mod downloads). It never deletes a file it did not make (those go to `System/backup/kept/`), never writes to the older launcher's folders (it reads the old save folder once), never ships game files and never uses the network.
 
 PATCH runs in steps, and each step checks the space it needs only for itself, right before it writes: the Jk4Speed files ("not enough free space: N MB needed, M MB free"), then the Wine prefix (about 330 MB, first PATCH; no space check of its own), then the pristine copies ("not enough free space to keep the original game files: N MB needed, M MB free"), then the mod swap ("not enough free space: N MB needed, M MB free"). A refused step writes nothing; the steps before it stay done (the Patch failure text says which). Unknown free space proceeds and logs it.
 
@@ -121,13 +121,13 @@ Players bring their own game. Only **NFS Most Wanted PC v1.3 Black Edition** is 
 
 ## Save games
 
-The seeded prefix redirects the game's "My Documents" (`Shell Folders\Personal` and `User Shell Folders\Personal`) to `Z:\data\Jk4Speed\Saves`, so the game writes `/data/Jk4Speed/Saves/NFS Most Wanted/<alias>/<alias>`. The folder is empty until the game's first save. r3 saves (the bench prefix's `Documents\NFS Most Wanted`) are copied once, never moved, when the new folder has no profile (`System/state/saves-migrated`). Player page: `docs/launcher/save-games.md`.
+The seeded prefix redirects the game's "My Documents" (`Shell Folders\Personal` and `User Shell Folders\Personal`) to `Z:\data\Jk4Speed\Saves`, so the game writes `/data/Jk4Speed/Saves/NFS Most Wanted/<alias>/<alias>`. The folder is empty until the game's first save. Saves of an older launcher (the bench prefix's `Documents\NFS Most Wanted`) are copied once, never moved, when the new folder has no profile (`System/state/saves-migrated`). Player page: `docs/launcher/save-games.md`.
 
 ## Wine prefix seed (PATCH)
 
 `jk_seed_import` builds `System/prefix` from the package's `jk4speed-files/seed/` (`index.txt`, `objects/`) and the `/app0/win` twins, every file checked by size and sha, marker `.jkseed-complete` last. A prefix folder with other content is never touched. PLAY without a complete prefix opens Patch. The old registry pre-seed (`nfsmw.reg`, `pending`) is gone.
 
-## Package layout (r4)
+## Package layout
 
 ```
 /app0/jk4speed-files/
@@ -140,8 +140,8 @@ The seeded prefix redirects the game's "My Documents" (`Shell Folders\Personal` 
 /app0/licenses/
 ```
 
-- The manifest has no ini, profile or server lines. Build with `launcher/title/make_pkg.sh`; it ships `docs/launcher/README-player.md` and `FAQ.md` and fails if a player page holds the runtime's internal name.
-- **Mods are never in the package.** The player brings the X360 Stuff Pack download, `NFSMWUHUD01022026b.7z` and the HD road ZIP as released; the launcher reads them on the console (zip deflate, 7z LZMA/LZMA2; RAR refused with a message). Player page: `docs/launcher/MODS.md`.
+- The manifest has no ini, profile or server lines. Build with `title/make_pkg.sh`; it ships `README-player.md` and `docs/FAQ.md` and fails if a player page holds the runtime's internal name.
+- **Mods are never in the package.** The player brings the X360 Stuff Pack download, `NFSMWUHUD01022026b.7z` and the HD road ZIP as released; the launcher reads them on the console (zip deflate, 7z LZMA/LZMA2; RAR refused with a message). Player page: `docs/MODS.md`.
 - Our builds come as JKD1 deltas (`X_*`, `H_*`/`H0_*`, `R_*`/`R0_*`; `launcher/title/author_deltas.py` also writes the catalog). Sources are the player's untouched game files (the pristine copies), archive entries by SHA-256 and the X road made by the pack's UPS; the tool refuses any delta whose literals hold a 64-byte block of a pack, HUD or road file. `HUDS_Custom_00.bin` is rebuilt with JDLZ ops and every compressed result passes the game-exact counter check.
 
 Ship `launcher/assets/font/LICENCE.txt` with the package's licence texts.

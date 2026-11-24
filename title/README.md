@@ -2,7 +2,7 @@
 
 The JK4SPEED title is the bench's relocatable Wine PS4 app (tree `native298-package277`, the same base JkFlow 1.00 builds on) with the Jk4Speed launcher linked in. Built offline in WSL; nothing here talks to a console.
 
-r4 moves everything under `/data/Jk4Speed`, like JkFlow does for Blur under `/data/JkFlow`: the Wine library root is `/data/Jk4Speed/System`, the Wine prefix is seeded by the launcher into `System/prefix`, the session logs go to `/data/Jk4Speed/Logs`, and the native DXVK server ships in the package. The title writes nothing under `/data/prospero-win`.
+The title moves everything under `/data/Jk4Speed`, like JkFlow does for Blur under `/data/JkFlow`: the Wine library root is `/data/Jk4Speed/System`, the Wine prefix is seeded by the launcher into `System/prefix`, the session logs go to `/data/Jk4Speed/Logs`, and the native DXVK server ships in the package. The title writes nothing under `/data/prospero-win`.
 
 | File | What |
 |---|---|
@@ -69,7 +69,7 @@ Inputs outside the repository (read only): the base tree `native298-package277`,
 
 ## Known limits (for the console test)
 
-- Title id `JKSP00001` is provisional (owner decision D4: own homebrew PKG).
+- Title id `JKSP00001` is provisional (own homebrew PKG).
 - The package 282 runtime modules (not built here) still write a few bench files on their own: `libvulkan.prx` sets `MESA_LOG_FILE=/data/prospero-win/radv.log` and reads `radv.env` there; `wowprospero` writes `/data/prospero-win/logs/wowprospero.log` on a translator memory fault. The title itself writes nothing there.
 - A console that already has `/data/prospero-win/override/dxvknative.prx` runs that server, not the packaged one (the bench's is ours by digest `807b2334`).
 - The first PATCH copies about 330 MB into `System/prefix` (mostly from `/app0/win`); a cut PATCH resumes.

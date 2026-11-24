@@ -24,3 +24,13 @@ Upstream projects
   Wine:  https://gitlab.winehq.org/wine/wine
   DXVK:  https://github.com/doitsujin/dxvk
   Mesa:  https://gitlab.freedesktop.org/mesa/mesa
+
+Shipped mod tools (unchanged builds, their own licences in LICENSES/)
+  Ultimate ASI Loader (dinput8.dll):  https://github.com/ThirteenAG/Ultimate-ASI-Loader
+  Xidi (Xidi.32.dll):                 https://github.com/samuelgr/Xidi
+  Xenon Effects:                      https://github.com/xan1242/NFSMW_XenonEffects
+
+Not included
+  Need for Speed: Most Wanted and the mods (Xbox 360 Stuff Pack, Upscaled HUD,
+  HD Road Textures) are not part of this repository or the package. The player
+  downloads them from their authors.

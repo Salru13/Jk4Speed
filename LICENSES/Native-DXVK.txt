@@ -1,12 +1,9 @@
 Native DXVK licence
 
-DRAFT - OWNER DECISION: the same terms as JkFlow's Native DXVK licence,
-named for Jk4Speed. The owner confirms or changes them before any release.
-
 Copyright (c) 2026 XxXJoker13XxX
 
 This licence covers our changes to DXVK in the Native DXVK renderer client
-d3d9.c988.dll as used by Jk4Speed, and the native renderer it talks to.
+d3d9.dll as used by Jk4Speed, and the native renderer it talks to.
 The DXVK 1.10.3 code they are built from stays under its own zlib/libpng
 licence (LICENSES/DXVK-zlib.txt); this licence does not change that.
 

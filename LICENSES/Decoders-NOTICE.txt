@@ -1,0 +1,31 @@
+Archive readers in the JK4SPEED launcher (launcher/src)
+
+jk_inflate.c  Raw DEFLATE, taken from the JkFlow launcher (same authors, LGPL-2.1-or-later).
+              Its structure follows puff.c from zlib's contrib/puff by Mark Adler,
+              distributed under the zlib licence:
+
+  Copyright (C) 2002-2013 Mark Adler, all rights reserved
+
+  This software is provided 'as-is', without any express or implied
+  warranty.  In no event will the author be held liable for any damages
+  arising from the use of this software.
+
+  Permission is granted to anyone to use this software for any purpose,
+  including commercial applications, and to alter it and redistribute it
+  freely, subject to the following restrictions:
+
+  1. The origin of this software must not be misrepresented; you must not
+     claim that you wrote the original software. If you use this software
+     in a product, an acknowledgment in the product documentation would be
+     appreciated but is not required.
+  2. Altered source versions must be plainly marked as such, and must not be
+     misrepresented as being the original software.
+  3. This notice may not be removed or altered from any source distribution.
+
+jk_lzma.c     LZMA and LZMA2 decoder, written for JK4SPEED (LGPL-2.1-or-later) from
+              the format as described in the LZMA SDK by Igor Pavlov, which is in the
+              public domain. No SDK code is included.
+jk_7z.c, jk_zip.c, jk_ups.c, jk_md5.c
+              Written for JK4SPEED (LGPL-2.1-or-later) from the published formats
+              (7z, ZIP APPNOTE, byuu's UPS, RFC 1321).
+jk_keyboard.c Taken from the JkFlow launcher (same authors, LGPL-2.1-or-later).

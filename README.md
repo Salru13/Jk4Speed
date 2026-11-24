@@ -10,7 +10,7 @@ Play your own PC copy of **Need for Speed: Most Wanted (2005)** on a PS4 with Go
 ![platform](https://img.shields.io/badge/platform-PS4%20(GoldHEN)-0070d1)
 ![license](https://img.shields.io/badge/launcher-LGPL--2.1--or--later-blue)
 
-JK4SPEED is a PS4 app with its own launcher, the Wine runtime for the console from [JkFlow](https://github.com/Salru13/JkFlow) and a native DXVK renderer. You bring the game and download the mods from their authors; JK4SPEED checks your Most Wanted folder, builds the Xbox 360 look on your console and starts the game. JK4SPEED ships **no game files and no mod files**. This repository holds the source of the launcher and the title build, and the licence texts shipped in the package. Player pages: [docs/](docs/).
+JK4SPEED is a PS4 app with its own launcher, the Wine runtime for the console from [JkFlow](https://github.com/Salru13/JkFlow) and a native DXVK renderer. You bring the game and download the mods from their authors; JK4SPEED checks your Most Wanted folder, builds the Xbox 360 look on your console and starts the game. JK4SPEED ships **no game files and no mod files**. This repository holds the source of the launcher and the title build, and the licence texts shipped in the package. Player guide: [README-player.md](README-player.md). More pages: [docs/](docs/).
 
 ## Requirements
 
@@ -46,7 +46,7 @@ The JK4SPEED launcher opens first. It has three items on its home screen:
 |---|---|
 | **PLAY** | Starts the game. |
 | **PATCH** | Checks your game folder, installs the JK4SPEED files and builds the mod files from the archives in `/data/Jk4Speed/Mods` (or `USB:/Jk4Speed/`). Anything it replaces is backed up first, and **Restore** puts it back. `SETTINGS > MODS` (or `PATCH > □ Mods`): the Xbox 360 Stuff Pack is **REQUIRED**; the Upscaled HUD and HD Road Textures each have an ON / OFF switch (ON by default). The first PATCH takes a few minutes (the pack is about 1 GB); the screen shows what it is reading, building and checking, in MB. |
-| **SETTINGS** | **FRAME RATE**, **MODS**, **CONTROLS** (controller layout), **SAVE GAMES**, **LOGS & SUPPORT** (Show FPS, Enable logs, Clear logs, support bundle) and **ABOUT**. |
+| **SETTINGS** | **FRAME RATE**, **SHOW FPS / MS**, **MODS**, **CONTROLS** (controller layout), **SAVE GAMES**, **LOGS & SUPPORT** (Enable logs, Clear logs, Save support bundle) and **ABOUT**. |
 
 On the game's title screen, wait until "Please press START" has fully faded in before you press ✕.
 
@@ -245,7 +245,7 @@ No. Settings you change before the first Patch are saved and used from the first
 
 In `/data/Jk4Speed/Saves`, one folder per profile inside `NFS Most Wanted`. To bring a PC save: copy `Documents\NFS Most Wanted` to `USB:/Jk4Speed/saves/`, open Settings > Save games and press the square button Import. Your current saves are backed up first. To take them to a PC: Settings > Save games, cross button Export to USB; the copy goes to `USB:/Jk4Speed/saves/<date>/`. Saves from v1.3 Black Edition work. Saves made with other mods (extra cars, for example) may not load.
 
-### What is Show FPS / ms?
+### What is Settings > Show FPS / ms?
 
 It shows the frames per second and the frame time in ms in the top right corner while you race. Off is fastest.
 
@@ -277,9 +277,23 @@ JK4SPEED has no contact address. If something goes wrong:
 |---|---|
 | `launcher/` | The JK4SPEED launcher: PLAY / PATCH / SETTINGS, the mod patcher, save tools and the Official Build check. Host tests: `launcher/tests/run.sh` (Linux/WSL). |
 | `title/` | How the PS4 title is built from the Wine PS4 runtime and the launcher, and how the package is made and signed. |
+| `README-player.md` | The player guide (shipped in the package). |
 | `docs/` | Player pages: mods, save games, FAQ. |
+| `launcher/third_party/` | TweetNaCl (public domain), used for the Official Build signature check. |
+| `.github/` | Ko-fi funding link. |
 | `probe/`, `templates/` | Pre-flight probe; runtime profile and registry templates. |
 | `LICENSE`, `LICENSES.md`, `THIRD_PARTY.md`, `SOURCES.txt`, `CREDITS.md`, `LICENSES/` | Licences, sources and credits. |
+
+## Building
+
+Launcher host tests (Linux or WSL; Ubuntu 24.04 tested):
+
+```bash
+sudo apt install build-essential python3 libfreetype-dev
+bash launcher/tests/run.sh
+```
+
+This builds the assets and runs every test with ASan and UBSan. The package build is described in [title/README.md](title/README.md).
 
 ## Licence
 
@@ -301,4 +315,4 @@ JK4SPEED has no contact address. If something goes wrong:
 JK4SPEED is an unofficial fan project. It is **not affiliated with, made by or endorsed by Electronic Arts**.
 Need for Speed and Need for Speed: Most Wanted are trademarks of Electronic Arts. JK4SPEED contains no EA game
 files; you use your own copy of the game. PlayStation and PS4 are trademarks of Sony Interactive Entertainment;
-JK4SPEED is not affiliated with Sony. Use it at your own risk.
+JK4SPEED is not affiliated with Sony. JK4SPEED is not affiliated with the authors of the mods it works with. Homebrew on a PS4 is at your own risk.

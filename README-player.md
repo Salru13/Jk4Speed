@@ -76,7 +76,7 @@ Your saves are in this folder, one folder per profile inside `NFS Most Wanted`:
 - **From a PC:** copy `Documents\NFS Most Wanted` to `USB:/Jk4Speed/saves/`, then open **Settings > Save games** and press the square button **Import**. Your current saves are backed up first.
 - **To a PC:** **Settings > Save games**, cross button **Export to USB**. The copy goes to `USB:/Jk4Speed/saves/<date>/`.
 
-Saves from v1.3 Black Edition work. Saves made with other mods (extra cars, for example) may not load. More: `save-games.md`.
+Saves from v1.3 Black Edition work. Saves made with other mods (extra cars, for example) may not load. More: [docs/save-games.md](docs/save-games.md).
 
 ## Show FPS / ms
 
@@ -98,8 +98,14 @@ Everything Jk4Speed keeps is in `/data/Jk4Speed`: your game (`NFSMW`), your save
 ## Help and problems
 
 - Help (the square button on Home) explains the game folder, mods, saves and what to do when something goes wrong.
-- The most common problems are in [FAQ.md](FAQ.md).
+- The most common problems are in [FAQ.md](docs/FAQ.md).
 
 ## Support
 
-JK4SPEED has no contact address. If something goes wrong: read the FAQ, make a support bundle (above) and share its files with whoever helps you. Official page: github.com/Salru13/Jk4Speed
+JK4SPEED has no contact address. If something goes wrong:
+
+1. Read the [FAQ](docs/FAQ.md) and Help in JK4SPEED (Square on the Home screen).
+2. Make a support bundle (**Settings > Logs & Support > Save support bundle**) and copy its folder to a PC over FTP.
+3. Open an issue on [GitHub Issues](https://github.com/Salru13/Jk4Speed/issues): say what you did and what you saw, and attach the support bundle files.
+
+Official page: github.com/Salru13/Jk4Speed
