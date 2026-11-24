@@ -24,7 +24,7 @@ JK4SPEED runs your own copy of Need for Speed Most Wanted (PC, v1.3 Black Editio
 /data/Jk4Speed/NFSMW/...  (all other game files and folders)
 ```
 
-   `speed.exe` must be directly in this folder, not in a folder inside it. Upper or lower case does not matter. Only use a copy of Most Wanted you own.
+   `speed.exe` must be directly in this folder, not in a folder inside it. Upper or lower case of `NFSMW` does not matter. Only use a copy of Most Wanted you own.
 3. In JK4SPEED, open **Patch** and press the cross button to install.
 4. Press **Play**.
 
