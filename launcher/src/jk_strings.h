@@ -234,6 +234,8 @@
 #define JK_S_E_PKG_DELTA "a Jk4Speed file (%s) is missing or damaged: reinstall Jk4Speed"
 #define JK_S_E_BUILD_FAILED "a mod file could not be made (%s)"
 #define JK_S_E_UNSAFE "%s is not a safe file name in the game folder"
+#define JK_S_P_PATIENCE "This takes about 5 minutes the first time. Please be patient: do not close JK4SPEED or turn off the PS4."
+#define JK_S_P_WORKING "Workingâ¦"
 #define JK_S_E_READING "Reading %s"
 #define JK_S_E_BUILDING "Building %s"
 #define JK_S_E_CHECKING "Checking %s"
@@ -263,6 +265,14 @@
 
 /* Controls (read-only, release layout: bench/controls/CURRENT-BINDINGS.md) */
 #define JK_S_CT_HEAD "CONTROLLER LAYOUT"
+#define JK_S_CT_FIXED_HEAD "FIXED"
+#define JK_S_CT_LISTEN "Press the new button for %s now. OPTIONS cancels."
+#define JK_S_CT_HELP "Pick a function, press the cross button, then press the new button. A function whose button you take is left as NONE: give it a new one."
+#define JK_S_CT_NONE "NONE"
+#define JK_S_CT_PRESS "PRESS A BUTTON"
+#define JK_S_H_LISTEN "Waiting for a button. OPTIONS cancels."
+#define JK_S_H_CHANGE "Change"
+#define JK_S_H_DEFAULT "Default layout"
 #define JK_S_CT_NOTE "On the title screen, wait for \"Please press START\" before you press the cross button."
 
 /* Save games */

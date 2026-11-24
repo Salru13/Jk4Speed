@@ -18,6 +18,7 @@
 #include "jk_saves.h"
 #include "jk_keyboard.h"
 #include "jk_ui.h"
+#include "jk_controls.h"
 
 #include <stddef.h>
 #include <stdint.h>
@@ -75,6 +76,7 @@ typedef struct JkModel {
     JkPace pace;
     JkPatchPhase phase;
     int prog_done, prog_total;
+    int prog_ticks;               /* every progress update: the bar moves before the first counted step */
     char prog_file[160];
     char msg[320];                /* Patch: failure reason */
     int fps_hud;                  /* Show FPS / ms: 0 off (default), 1 on */
@@ -115,7 +117,10 @@ typedef struct JkModel {
     const char *build_id;         /* bottom right, may be NULL */
     const char *failure, *failure_log;
     JkRelease release;
-    int x360_required;            /* r5: the pack row is locked ON (no arrows) */
+    int x360_required;
+    JkControls controls;          /* SETTINGS > CONTROLS: the layout shown and edited */
+    int ctl_focus;                /* the focused function (JkCtlAction) */
+    int ctl_listen;               /* 1: waiting for the button to capture */            /* r5: the pack row is locked ON (no arrows) */
     int siren;                    /* 0..256: the focus bar's red/blue cross-fade */
 } JkModel;
 

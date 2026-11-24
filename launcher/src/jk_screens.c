@@ -414,36 +414,53 @@ static void draw_settings(JkFrame *f, const JkModel *m)
 /* Controls (read-only release layout)                                */
 /* ------------------------------------------------------------------ */
 
-typedef struct Bind { int glyph; const char *key, *action; } Bind;
 
 static void draw_controls(JkFrame *f, const JkModel *m)
 {
     chrome(f, m);
     page_title(f, JK_S_CONTROLS);
-    panel(f, 150, PANEL_Y, 1660, PANEL_H, JK_RGB_SMOKE);
-    jk_text(f, JK_FONT_HEAD, 194, PANEL_Y + 34, JK_S_CT_HEAD, JK_RGB_CHALK);
-    /* bench/controls/CURRENT-BINDINGS.md, owner layout 2026-11-23 (Xidi.ini 3c03a044, profile d50083c0) */
-    static const Bind rows[] = {
-        { -1, "R2", "Gas" },                         { -1, "L2", "Brake / reverse" },
-        { JK_BTN_CROSS, NULL, "Handbrake, accept" }, { JK_BTN_CIRCLE, NULL, "Brake, back" },
-        { JK_BTN_SQUARE, NULL, "Nitrous (N2O)" },    { JK_BTN_TRIANGLE, NULL, "Speedbreaker" },
-        { -1, "L1 / R1", "Shift down / up" },        { -1, "R3", "Change camera" },
-        { -1, "L3", "Reset car" },                   { -1, "OPTIONS", "Pause" },
-        { -1, "Left stick", "Steer" },               { -1, "D-pad", "Menus" },
-        { -1, "Right stick back", "Look behind" },
-    };
-    int n = (int)(sizeof rows / sizeof rows[0]), half = (n + 1) / 2;
+    panel(f, 150, PANEL_Y, 1660, PANEL_H, m->ctl_listen ? JK_RGB_DUSK : JK_RGB_SMOKE);
     int lh = jk_font_line_height(JK_FONT_BODY);
-    for (int i = 0; i < n; i++) {
-        int col = i / half, row = i % half;
-        int x = 194 + col * 800, y = PANEL_Y + 120 + row * 62;
-        if (rows[i].glyph >= 0) jk_button_glyph(f, x, y + (lh - 40) / 2, 40, (JkButton)rows[i].glyph);
-        else jk_text(f, JK_FONT_BODY, x, y, rows[i].key, JK_RGB_DUSK);
-        jk_text(f, JK_FONT_BODY, x + 230, y, rows[i].action, JK_RGB_CHALK);
+    /* the ten remappable functions: name, button (or "–" when empty) */
+    const int x = 194, rw = 860, step = 52, y0 = PANEL_Y + 30;
+    for (int i = 0; i < JK_ACT_N; i++) {
+        int y = y0 + i * step, focused = m->ctl_focus == i;
+        int btn = m->controls.btn[i];
+        if (focused) {
+            jk_plate(f, x - 24, y - 4, 12, lh + 8, JK_RGB_DUSK, 255);
+            jk_plate(f, x - 6, y - 4, rw, lh + 8, JK_RGB_ASPHALT, 255);
+        }
+        jk_text(f, JK_FONT_BODY, x + 10, y, jk_controls_action_name((JkCtlAction)i), JK_RGB_CHALK);
+        const char *bn = btn == JK_CB_NONE ? JK_S_CT_NONE : jk_controls_button_name((JkCtlButton)btn);
+        uint32_t ink = focused && m->ctl_listen ? JK_RGB_CHALK : btn == JK_CB_NONE ? JK_RGB_RED_TEXT : JK_RGB_DUSK;
+        jk_text(f, JK_FONT_BODY, x + rw - 300, y, focused && m->ctl_listen ? JK_S_CT_PRESS : bn, ink);
     }
-    wrap(f, JK_FONT_HINT, 194, PANEL_Y + 120 + half * 62 + 16, 1560, JK_S_CT_NOTE, JK_RGB_SMOKE);
-    Hint h[1] = { { JK_BTN_CIRCLE, JK_S_H_BACK } };
-    hint_bar(f, h, 1, m->build_id);
+    /* fixed, never remapped */
+    const int fx = 1120;
+    jk_text(f, JK_FONT_HEAD, fx, y0, JK_S_CT_FIXED_HEAD, JK_RGB_CHALK);
+    static const char *const fixed[][2] = {
+        { "OPTIONS", "Pause" }, { "Left stick", "Steer" }, { "Right stick back", "Look behind" }, { "D-pad", "Menus" },
+    };
+    for (int i = 0; i < 4; i++) {
+        int y = y0 + 70 + i * step;
+        jk_text(f, JK_FONT_BODY, fx, y, fixed[i][0], JK_RGB_DUSK);
+        jk_text(f, JK_FONT_BODY, fx + 300, y, fixed[i][1], JK_RGB_CHALK);
+    }
+    int ty = y0 + JK_ACT_N * step + 10;
+    if (m->ctl_listen) {
+        char line[160];
+        snprintf(line, sizeof line, JK_S_CT_LISTEN, jk_controls_action_name((JkCtlAction)m->ctl_focus));
+        wrap(f, JK_FONT_BODY, x, ty, 1560, line, JK_RGB_CHALK);
+    } else {                                               /* help in the right column, under FIXED */
+        int hy = wrap(f, JK_FONT_HINT, fx, y0 + 70 + 4 * step + 30, 640, JK_S_CT_HELP, JK_RGB_SMOKE);
+        wrap(f, JK_FONT_HINT, fx, hy + 10, 640, JK_S_CT_NOTE, JK_RGB_SMOKE);
+    }
+    if (m->ctl_listen) {
+        hint_text(f, JK_S_H_LISTEN, m->build_id);
+    } else {
+        Hint h[3] = { { JK_BTN_CROSS, JK_S_H_CHANGE }, { JK_BTN_TRIANGLE, JK_S_H_DEFAULT }, { JK_BTN_CIRCLE, JK_S_H_BACK } };
+        hint_bar(f, h, 3, m->build_id);
+    }
 }
 
 /* ------------------------------------------------------------------ */
@@ -732,6 +749,8 @@ void jk_no_pristine_body(const JkModel *m, char *out, size_t cap)
 
 enum { MODS_ROW_Y0 = PANEL_Y + 84, MODS_ROW_STEP = 62, MODS_ROW_H = 54 };
 
+static void progress_bar(JkFrame *f, const JkModel *m, int x, int y, int w);
+
 const char *jk_mods_row_text(int row)
 {
     switch (row) {
@@ -769,9 +788,8 @@ static void draw_mods(JkFrame *f, const JkModel *m)
         int y = MODS_ROW_Y0;
         jk_text(f, JK_FONT_BODY, x, y, m->prog_file, JK_RGB_CHALK);
         y += jk_font_line_height(JK_FONT_BODY) + 14;
-        jk_fill(f, x, y, w, 18, JK_RGB_ASPHALT);
-        int fill = m->prog_total > 0 ? (int)((long long)w * m->prog_done / m->prog_total) : 0;
-        jk_fill(f, x, y, fill, 18, JK_RGB_DUSK);
+        progress_bar(f, m, x, y, w);
+        wrap(f, JK_FONT_HINT, x, y + 44, w, JK_S_P_PATIENCE, JK_RGB_CHALK);
         hint_text(f, JK_S_H_WAIT, m->build_id);
         return;
     }
@@ -950,12 +968,12 @@ static void draw_patch(JkFrame *f, const JkModel *m)
     if (m->phase == JK_PH_INSTALLING) {
         int by = PANEL_Y + 250;
         jk_text(f, JK_FONT_BODY, tx, by - 70, m->prog_file, JK_RGB_CHALK);
-        jk_fill(f, tx, by, tw, 18, JK_RGB_ASPHALT);
-        int fill = m->prog_total > 0 ? (int)((long long)tw * m->prog_done / m->prog_total) : 0;
-        jk_fill(f, tx, by, fill, 18, JK_RGB_DUSK);
+        progress_bar(f, m, tx, by, tw);
         char count[48];
-        snprintf(count, sizeof count, "%d of %d", m->prog_done, m->prog_total);
+        if (m->prog_done > 0) snprintf(count, sizeof count, "%d of %d", m->prog_done, m->prog_total);
+        else snprintf(count, sizeof count, "%s", JK_S_P_WORKING);
         jk_text(f, JK_FONT_HINT, tx, by + 34, count, JK_RGB_SMOKE);
+        wrap(f, JK_FONT_HINT, tx, by + 84, tw, JK_S_P_PATIENCE, JK_RGB_CHALK);
     }
 
     JkPatchAction a = jk_patch_primary(m);
@@ -1062,6 +1080,22 @@ static void draw_failed(JkFrame *f, const JkModel *m)
 }
 
 /* "Patch was interrupted": once, at the open after a PATCH that was cut off. */
+/* The PATCH bar: the counted steps, and before the first one a segment that
+ * moves at every progress update (reading, building: minutes of work that
+ * are not steps), so it never looks stuck. */
+static void progress_bar(JkFrame *f, const JkModel *m, int x, int y, int w)
+{
+    jk_fill(f, x, y, w, 18, JK_RGB_ASPHALT);
+    if (m->prog_total > 0 && m->prog_done > 0) {
+        jk_fill(f, x, y, (int)((long long)w * m->prog_done / m->prog_total), 18, JK_RGB_DUSK);
+        return;
+    }
+    int seg = w / 5, span = w - seg;
+    int pos = span > 0 ? (int)(((long long)m->prog_ticks * 47) % (2 * span)) : 0;
+    if (pos > span) pos = 2 * span - pos;                   /* back and forth */
+    jk_fill(f, x + pos, y, seg, 18, JK_RGB_DUSK);
+}
+
 /* r5: the one-time setup at open (the Wine prefix), with progress. */
 static void draw_setup(JkFrame *f, const JkModel *m)
 {
@@ -1070,9 +1104,7 @@ static void draw_setup(JkFrame *f, const JkModel *m)
     panel(f, 150, PANEL_Y, 1660, PANEL_H, JK_RGB_DUSK);
     int x = 194, w = 1570;
     int y = wrap(f, JK_FONT_BODY, x, PANEL_Y + 40, w, JK_S_SETUP_BODY, JK_RGB_CHALK) + 30;
-    jk_fill(f, x, y, w, 18, JK_RGB_ASPHALT);
-    int fill = m->prog_total > 0 ? (int)((long long)w * m->prog_done / m->prog_total) : 0;
-    jk_fill(f, x, y, fill, 18, JK_RGB_DUSK);
+    progress_bar(f, m, x, y, w);
     hint_text(f, JK_S_H_WAIT, m->build_id);
 }
 

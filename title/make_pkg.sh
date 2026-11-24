@@ -47,6 +47,8 @@ die() { echo "make_pkg: $*" >&2; exit 1; }
 [ -x "$PKGTOOL" ] || die "missing $PKGTOOL"
 
 STAGE="$OUT/pkg-stage"
+PHASE="${JK_PKG_PHASE:-all}"     # all | stage (stop after release.txt) | pack (reuse the stage, sign, pack)
+if [ "$PHASE" != pack ]; then
 rm -rf "$STAGE" "$OUT/package"
 mkdir -p "$STAGE/jk4speed-files" "$STAGE/sce_module" "$STAGE/sce_sys" "$STAGE/licenses/LICENSES" "$STAGE/docs" "$OUT/package"
 
@@ -65,7 +67,7 @@ say "jk4speed-files (release lock hashes)"
 stage d3d9.dll "$MAIN_REPO/evidence/codex-re60/world-lod-queue-decl.dll" 28c101ff39c877ae9e63905d655568c62fd5bfcdea24a6ce57c9a9ae896dc207
 stage dinput8.dll "$KIT/dinput8.dll" 63b465dbc1bf9c5ab4e33c3ccad099d9edb702f2c51587ac8d4f196497396437
 stage Xidi.32.dll "$KIT/Xidi.32.dll" 226624efa1d7cddf258fcfd8e5e23afcd81f627077738cb9664d906cdfcc66c6
-stage Xidi.ini "$repo/bench/xidi/Xidi.ini" 3c03a044672bff5af4860c9332dc94e2428a8ab983c38ac0d1029f58bbc46d54 lf
+stage Xidi.ini "$here/config/Xidi.ini" 3c03a044672bff5af4860c9332dc94e2428a8ab983c38ac0d1029f58bbc46d54 lf
 stage dxvk.conf "$repo/bench/dxvk/dxvk.conf" b54c72f6207f53ebb7bc08248958f814a03128266f8085d15bebff4210f32739 lf
 # r4: the launcher composes <game>/jk4speed-dev.ini and System/profiles/nfsmw.profile from these
 # two (jk_config.c reads them from jk4speed-files/; they are never installed as such)
@@ -181,10 +183,13 @@ fi
 grep -qi prospero "$STAGE/jk4speed-files/about/CREDITS.txt" && echo "   WARN about/CREDITS.txt names the prospero runtime (credit line)" || true
 
 say "production check (no test hook in the title)"
-if [ "${JK_DEV:-0}" != 1 ] && grep -a -q -e "devtools on dir" -e "PWCTRL1" "$OUT/reloc-build/prx/relocated_wine_app.prx" "$OUT/reloc-build/eboot.bin"; then
+if [ "${JK_DEV:-0}" != 1 ] && grep -a -q -e "devtools on dir" -e "jk_devhook" "$OUT/reloc-build/prx/relocated_wine_app.prx" "$OUT/reloc-build/eboot.bin"; then
     die "the title carries the console test hook: build_title.sh without JK_DEV=1 for a release"
 fi
 echo "   no test hook"
+
+fi   # end of the stage part (JK_PKG_PHASE=pack starts here)
+[ -d "$STAGE/jk4speed-files" ] || die "no stage: run with JK_PKG_PHASE=stage first"
 
 say "release list (Official Build badge, launcher/src/jk_release.h)"
 python3 -I "$launcher/tools/make_release.py" "$STAGE" "JK4SPEED 1.0" --eboot "$OUT/reloc-build/eboot.bin"
@@ -200,6 +205,11 @@ else
     cp "$STAGE/jk4speed-files/release.txt" "$REL_KEEP/release.txt"
     echo "   WARN unsigned: this package shows Unofficial build. To sign: bash launcher/tools/sign_release.sh ${REL_KEEP%/jk4speed-files}"
     echo "        then run make_pkg.sh again with JK_RELEASE_SIG=$REL_KEEP/release.sig"
+fi
+
+if [ "$PHASE" = stage ]; then
+    echo "   stage done: sign $REL_KEEP/release.txt, then JK_PKG_PHASE=pack"
+    exit 0
 fi
 
 say "file list"

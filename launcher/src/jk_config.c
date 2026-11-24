@@ -94,6 +94,15 @@ static void put(Buf *b, const char *s, const char *eol)
     memcpy(b->p + b->n, eol, c); b->n += c;
 }
 
+/* Appends text as it is (it carries its own line ends). */
+static void put_raw(Buf *b, const char *t)
+{
+    size_t a = strlen(t);
+    if (b->bad || b->n + a + 1 > b->cap) { b->bad = 1; return; }
+    memcpy(b->p + b->n, t, a);
+    b->n += a;
+}
+
 /* The base file's text, or NULL with a reason. */
 static char *read_base(const char *files_dir, const char *name, char *why, size_t cap)
 {
@@ -361,26 +370,36 @@ int jk_config_write_profile(const JkConfigIn *in, char *why, size_t cap)
     if (!base) return -1;
     Buf b = { malloc(OUT_MAX), 0, OUT_MAX, 0 };
     if (!b.p) { free(base); say(why, cap, "out of memory"); return -1; }
-    int in_app = 0, in_debug = 0, app_done = 0;
+    int in_app = 0, in_debug = 0, app_done = 0, in_input = 0, binds_done = 0;
+    JkControls dc;
+    const JkControls *ctl = in->controls;
+    if (!ctl) { jk_controls_default(&dc); ctl = &dc; }
+    char binds[256];
+    if (jk_controls_input_lines(ctl, binds, sizeof binds) < 0) binds[0] = 0;
     for (char *line = base, *next; line && *line; line = next) {
         next = strchr(line, '\n');
         if (next) *next++ = 0;
         char *s = trim(line), scratch[128];
         if (!*s) continue;
         if (*s == '[') {
+            if (in_input && !binds_done) { put_raw(&b, binds); binds_done = 1; }   /* [input] without a mode line */
             if (in_app && !app_done) { profile_application(&b, in); app_done = 1; }
             in_app = !strncasecmp(s, "[application]", 13);
             in_debug = !strncasecmp(s, "[debug]", 7);
+            in_input = !strncasecmp(s, "[input]", 7);
             if (!in_debug) put(&b, s, "\n");
             continue;
         }
         if (in_debug) continue;                   /* the writer owns [debug] */
         const char *k = key_of(s, scratch, sizeof scratch);
+        if (in_input && k && strcasecmp(k, "mode")) continue;   /* the binds come from CONTROLS */
         if (in_app && k && (!strcasecmp(k, "executable") || !strcasecmp(k, "working_directory") || !strcasecmp(k, "prefix")))
             continue;
         put(&b, s, "\n");
+        if (in_input && k && !strcasecmp(k, "mode") && !binds_done) { put_raw(&b, binds); binds_done = 1; }   /* after "mode = xinput" */
         if (in_app && !app_done && k && !strcasecmp(k, "name")) { profile_application(&b, in); app_done = 1; }
     }
+    if (in_input && !binds_done) put_raw(&b, binds);
     if (in_app && !app_done) profile_application(&b, in);
     profile_debug(&b, in);
     free(base);
@@ -391,6 +410,55 @@ int jk_config_write_profile(const JkConfigIn *in, char *why, size_t cap)
     else if (jk_fs_mkdir_p(in->profiles_dir) < 0) say(why, cap, "could not make the profiles folder");
     else if (jk_fs_write_atomic(path, b.p, b.n) < 0) say(why, cap, "could not write nfsmw.profile");
     else { r = 0; chmod(path, 0666); note_composed(in->state_dir, "profile", path); }
+    free(b.p);
+    return r;
+}
+
+/* ------------------------------------------------------------------ */
+/* Xidi.ini (SETTINGS > CONTROLS)                                     */
+/* ------------------------------------------------------------------ */
+
+int jk_config_write_xidi(const JkConfigIn *in, char *why, size_t cap)
+{
+    if (!in || !in->game_dir) { say(why, cap, "no game folder"); return -1; }
+    char *base = read_base(in->files_dir, "Xidi.ini", why, cap);
+    if (!base) return -1;
+    JkControls dc;
+    const JkControls *ctl = in->controls;
+    if (!ctl) { jk_controls_default(&dc); ctl = &dc; }
+    char lines[1024];
+    if (jk_controls_xidi_lines(ctl, lines, sizeof lines) < 0) { free(base); say(why, cap, "controls"); return -1; }
+    Buf b = { malloc(OUT_MAX), 0, OUT_MAX, 0 };
+    if (!b.p) { free(base); say(why, cap, "out of memory"); return -1; }
+    for (char *line = base, *next; line; line = next) {
+        next = strchr(line, '\n');
+        if (next) *next++ = 0;
+        if (!next && !*line) break;                       /* the end of the file */
+        char scratch[128];
+        const char *k = key_of(line, scratch, sizeof scratch);
+        const char *hit = NULL;
+        if (k && *k) {                                     /* one of the 10 remappable buttons: ours */
+            char want[140];
+            snprintf(want, sizeof want, "%s = ", k);
+            for (const char *l = lines; *l; l = strchr(l, '\n') + 1)
+                if (!strncmp(l, want, strlen(want))) { hit = l; break; }
+        }
+        if (hit) {
+            const char *e = strchr(hit, '\n');
+            char one[160];
+            snprintf(one, sizeof one, "%.*s", (int)(e - hit), hit);
+            put(&b, one, "\n");
+        } else {
+            put(&b, line, "\n");
+        }
+    }
+    free(base);
+    char path[1024];
+    int r = -1;
+    if (b.bad) say(why, cap, "Xidi.ini base is too large");
+    else if (jk_fs_join(path, sizeof path, in->game_dir, "Xidi.ini") < 0) say(why, cap, "game folder path too long");
+    else if (jk_fs_write_atomic(path, b.p, b.n) < 0) say(why, cap, "could not write Xidi.ini");
+    else { r = 0; chmod(path, 0666); }
     free(b.p);
     return r;
 }

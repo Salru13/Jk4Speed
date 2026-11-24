@@ -2,6 +2,7 @@
 /* Copyright 2026 XxXJoker13XxX and contributors */
 /* The frontend state machine and run loop. See jk_frontend.h. */
 #include "jk_frontend.h"
+#include "jk_controls.h"
 #include "jk_art.h"
 #include "jk_config.h"
 #include "jk_fs.h"
@@ -91,8 +92,23 @@ static void compose(JkApp *a)
     char sd[1024];
     in.state_dir = state_dir(a, sd, sizeof sd) == 0 ? sd : NULL;                  /* composed.txt: what we last wrote */
     if (jk_config_write_ini(&in, why, sizeof why) < 0) event(a, "config: ini not written: %s", why, NULL);
+    JkControls ctl;                                                                 /* SETTINGS > CONTROLS */
+    jk_controls_load(in.state_dir, &ctl);
+    in.controls = &ctl;
     if (a->s->profiles_dir && jk_config_write_profile(&in, why, sizeof why) < 0)
         event(a, "config: profile not written: %s", why, NULL);
+    if (jk_config_write_xidi(&in, why, sizeof why) < 0) event(a, "config: Xidi.ini not written: %s", why, NULL);
+}
+
+/* Restore: the package's Xidi.ini back first (the layout as installed), so the
+ * patcher takes it away as its own file. */
+static void xidi_default(JkApp *a)
+{
+    if (!a->s->game_dir || !a->s->files_dir) return;
+    char src[1024], dst[1024];
+    if (jk_fs_join(src, sizeof src, a->s->files_dir, "Xidi.ini") == 0 && jk_fs_exists(src)
+        && jk_fs_join(dst, sizeof dst, a->s->game_dir, "Xidi.ini") == 0 && jk_fs_exists(dst))
+        jk_fs_copy_checked(src, dst, NULL);
 }
 
 /* The package's Wine prefix seed (jk_seed.h): <files_dir>/seed, the app root
@@ -384,6 +400,7 @@ static void on_progress(void *ctx, int done, int total, const char *file)
     JkApp *a = ctx;
     a->m.prog_done = done;
     a->m.prog_total = total;
+    a->m.prog_ticks++;
     snprintf(a->m.prog_file, sizeof a->m.prog_file, "%s", file ? file : "");
     present(a);
 }
@@ -519,7 +536,7 @@ static void do_restore(JkApp *a)
     a->m.restore_left_n = r == 0 ? a->m.mods.nleft : 0;
     memcpy(a->m.restore_left, a->m.mods.left, sizeof a->m.restore_left);
     if (r == JK_MS_PENDING) snprintf(a->pending_why, sizeof a->pending_why, "%s", why);
-    if (r == 0) r = jk_patch_restore(&p, why, sizeof why);
+    if (r == 0) { xidi_default(a); r = jk_patch_restore(&p, why, sizeof why); }
     a->m.dialog = JK_DLG_NONE;
     recheck(a);
     if (r == 0) {
@@ -706,6 +723,41 @@ static void toggle_mod(JkApp *a)
     scan_mods(a);
 }
 
+static void back_to_settings(JkApp *a);
+
+/* SETTINGS > CONTROLS: ↑↓ a function, ✕ listens and the first remappable
+ * button pressed is taken at once (a function that had it is left empty),
+ * OPTIONS cancels listening, △ the default layout, ○ back. Saved at once;
+ * the game gets it at the next PLAY (compose). */
+static void controls_save(JkApp *a)
+{
+    char sd[1024];
+    if (state_dir(a, sd, sizeof sd) == 0 && jk_controls_save(sd, &a->m.controls) == 0) {
+        char line[64];
+        snprintf(line, sizeof line, "%s", jk_controls_action_name((JkCtlAction)a->m.ctl_focus));
+        event(a, "controls saved (last: %s)", line, NULL);
+    }
+}
+
+static void press_controls(JkApp *a, uint32_t b)
+{
+    JkModel *m = &a->m;
+    if (m->ctl_listen) {
+        if (b == JK_PAD_OPTIONS) { m->ctl_listen = 0; return; }
+        int btn = jk_controls_button_from_pad(b);
+        if (btn < 0) return;                                    /* D-pad, sticks: keep listening */
+        jk_controls_assign(&m->controls, (JkCtlAction)m->ctl_focus, (JkCtlButton)btn);
+        m->ctl_listen = 0;
+        controls_save(a);
+        return;
+    }
+    if (b == JK_PAD_CIRCLE) { back_to_settings(a); return; }
+    if (b == JK_PAD_UP) m->ctl_focus = (m->ctl_focus + JK_ACT_N - 1) % JK_ACT_N;
+    else if (b == JK_PAD_DOWN) m->ctl_focus = (m->ctl_focus + 1) % JK_ACT_N;
+    else if (b == JK_PAD_CROSS) m->ctl_listen = 1;
+    else if (b == JK_PAD_TRIANGLE) { jk_controls_default(&m->controls); controls_save(a); }
+}
+
 static void press_mods(JkApp *a, uint32_t b)
 {
     JkModel *m = &a->m;
@@ -806,7 +858,9 @@ static void finish(JkApp *a, JkAction action)
 static uint32_t pick(uint32_t pressed)
 {
     static const uint32_t order[] = { JK_PAD_CIRCLE, JK_PAD_CROSS, JK_PAD_TRIANGLE, JK_PAD_SQUARE,
-                                      JK_PAD_UP, JK_PAD_DOWN, JK_PAD_LEFT, JK_PAD_RIGHT };
+                                      JK_PAD_UP, JK_PAD_DOWN, JK_PAD_LEFT, JK_PAD_RIGHT,
+                                      /* CONTROLS capture; other screens ignore them */
+                                      JK_PAD_R2, JK_PAD_L2, JK_PAD_R1, JK_PAD_L1, JK_PAD_R3, JK_PAD_L3, JK_PAD_OPTIONS };
     for (size_t i = 0; i < sizeof order / sizeof order[0]; i++)
         if (pressed & order[i]) return order[i];
     return 0;
@@ -852,7 +906,14 @@ static void press_settings(JkApp *a, uint32_t b)
     if (b != JK_PAD_CROSS) return;
     switch (m->set_focus) {
     case JK_SET_MODS: a->mods_back = JK_SCR_SETTINGS; go(a, JK_SCR_MODS); break;
-    case JK_SET_CONTROLS: go(a, JK_SCR_CONTROLS); break;
+    case JK_SET_CONTROLS: {
+        char sd[1024];
+        jk_controls_load(state_dir(a, sd, sizeof sd) == 0 ? sd : NULL, &a->m.controls);
+        a->m.ctl_focus = 0;
+        a->m.ctl_listen = 0;
+        go(a, JK_SCR_CONTROLS);
+        break;
+    }
     case JK_SET_SAVES: go(a, JK_SCR_SAVES); break;
     case JK_SET_LOGS: a->logs_back = JK_SCR_SETTINGS; go(a, JK_SCR_LOGS); break;
     default: go(a, JK_SCR_ABOUT); break;
@@ -1029,9 +1090,7 @@ int jk_app_press(JkApp *a, uint32_t pressed)
     switch (a->m.screen) {
     case JK_SCR_PATCH: press_patch(a, b); break;
     case JK_SCR_SETTINGS: press_settings(a, b); break;
-    case JK_SCR_CONTROLS:
-        if (b == JK_PAD_CIRCLE) back_to_settings(a);
-        break;
+    case JK_SCR_CONTROLS: press_controls(a, b); break;
     case JK_SCR_ABOUT:
         if (b == JK_PAD_CIRCLE) back_to_settings(a);
         else if (b == JK_PAD_SQUARE) go(a, JK_SCR_CREDITS);

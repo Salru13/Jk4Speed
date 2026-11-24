@@ -5,6 +5,7 @@
 #include "jk_test.h"
 #include "jk_tmp.h"
 #include "jk_config.h"
+#include "jk_controls.h"
 #include "jk_fs.h"
 
 #define BASE_DIR JK_ROOT_DIR "/title/config"
@@ -173,6 +174,40 @@ static void user_ini_overrides(void)
     CHECK_EQ(jk_config_write_ini(&in, why, sizeof why), 0);
     CHECK(read_ini(&in, buf, sizeof buf) > 0);
     CHECK(has_line(buf, "DXVK_PS4_NFS_SHADOWS_NV=0"));
+    tmp_rm_rf(d);
+}
+
+/* CONTROLS remap: the profile's [input] binds and Xidi.ini follow the
+ * player's layout; the defaults give today's release files exactly. */
+static void controls_compose_profile_and_xidi(void)
+{
+    char d[256], buf[8192], path[600];
+    tmp_dir(d, sizeof d);
+    JkConfigIn in;
+    cfg_real(&in, d, BASE_DIR);
+    JkControls c;
+    jk_controls_default(&c);
+    in.controls = &c;
+    char why[200];
+    CHECK_EQ(jk_config_write_profile(&in, why, sizeof why), 0);
+    snprintf(path, sizeof path, "%s/nfsmw.profile", in.profiles_dir);
+    FILE *f = fopen(path, "rb"); size_t n = f ? fread(buf, 1, sizeof buf - 1, f) : 0; if (f) fclose(f); buf[n] = 0;
+    CHECK(strstr(buf, "[input]\nmode = xinput\nl1 = ctrl\nr1 = shift\nr3 = c\n") != NULL);
+    CHECK_EQ(jk_config_write_xidi(&in, why, sizeof why), 0);
+    snprintf(path, sizeof path, "%s/Xidi.ini", in.game_dir);
+    char sha[65];
+    CHECK(jk_fs_sha256(path, sha, NULL) == 0 && !strcmp(sha, "3c03a044672bff5af4860c9332dc94e2428a8ab983c38ac0d1029f58bbc46d54"));
+    jk_controls_assign(&c, JK_ACT_SHIFT_UP, JK_CB_SQUARE);      /* shift up on square; nitro left empty */
+    CHECK_EQ(jk_config_write_profile(&in, why, sizeof why), 0);
+    snprintf(path, sizeof path, "%s/nfsmw.profile", in.profiles_dir);
+    f = fopen(path, "rb"); n = f ? fread(buf, 1, sizeof buf - 1, f) : 0; if (f) fclose(f); buf[n] = 0;
+    CHECK(strstr(buf, "\nsquare = shift\n") && !strstr(buf, "\nr1 = shift\n"));
+    CHECK_EQ(jk_config_write_xidi(&in, why, sizeof why), 0);
+    snprintf(path, sizeof path, "%s/Xidi.ini", in.game_dir);
+    f = fopen(path, "rb"); n = f ? fread(buf, 1, sizeof buf - 1, f) : 0; if (f) fclose(f); buf[n] = 0;
+    CHECK(strstr(buf, "ButtonX = Null\n") && strstr(buf, "ButtonRB = Button(12)\n"));   /* R1 free; nitro left empty */
+    CHECK(strstr(buf, "StickRightY = Split(Button(5), Null)") != NULL);      /* fixed lines kept */
+    CHECK(strstr(buf, "ButtonStart = Button(8)") != NULL);
     tmp_rm_rf(d);
 }
 
@@ -428,6 +463,7 @@ int main(void)
     RUN(ini_without_base_fails_and_writes_nothing);
     RUN(foreign_ini_backed_up_once);
     RUN(user_ini_overrides);
+    RUN(controls_compose_profile_and_xidi);
     RUN(profile_release_has_no_diag_no_trace);
     RUN(profile_fps_on);
     RUN(profile_logs_on);

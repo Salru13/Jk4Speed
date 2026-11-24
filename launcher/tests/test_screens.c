@@ -46,6 +46,7 @@ static void hint_bar_present_every_screen(void)
     int n = jk_cases(cases);
     for (int i = 0; i < n; i++) {
         if (cases[i].m.phase == JK_PH_INSTALLING) continue;     /* nothing to press while installing */
+        if (cases[i].m.ctl_listen) continue;                    /* CONTROLS listening: any button is the answer */
         jk_screen_draw(&f, &cases[i].m);
         int chalk = 0;
         for (int y = 950; y < 1010; y++)
@@ -225,6 +226,29 @@ static void settings_labels_in_order(void)
 }
 
 /* MODS: each JK_MS_ROW_* has its exact words, and the screen draws them. */
+/* 1.00 final (owner, 2026-11-24): while PATCH works before the first counted
+ * step, the bar still moves at each update, and the screen asks for patience. */
+static void patch_bar_moves_before_first_step(void)
+{
+    JkFrame a = frame_new(), b = frame_new();
+    JkModel m = case_base(JK_SCR_PATCH, JK_ST_NOT_INSTALLED);
+    m.phase = JK_PH_INSTALLING;
+    m.prog_done = 0; m.prog_total = 60;
+    snprintf(m.prog_file, sizeof m.prog_file, "Reading pack.zip (120 MB)");
+    m.prog_ticks = 1;
+    jk_screen_draw(&a, &m);
+    m.prog_ticks = 2;
+    jk_screen_draw(&b, &m);
+    CHECK(memcmp(a.pixels, b.pixels, (size_t)JK_W * JK_H * 4) != 0);
+    CHECK(strstr(JK_S_P_PATIENCE, "about 5 minutes") != NULL);
+    m.screen = JK_SCR_MODS;
+    jk_screen_draw(&a, &m);
+    m.prog_ticks = 3;
+    jk_screen_draw(&b, &m);
+    CHECK(memcmp(a.pixels, b.pixels, (size_t)JK_W * JK_H * 4) != 0);
+    free(a.pixels); free(b.pixels);
+}
+
 static void mods_rows_follow_scan(void)
 {
     static const struct { int row; const char *text; } rows[] = {
@@ -379,6 +403,7 @@ int main(void)
     RUN(footer_on_every_home_state);
     RUN(settings_labels_in_order);
     RUN(mods_rows_follow_scan);
+    RUN(patch_bar_moves_before_first_step);
     RUN(no_clean_original_text);
     RUN(interrupted_copy_exact);
     RUN(help_pages_draw);

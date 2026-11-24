@@ -5,6 +5,7 @@
 #include "jk_test.h"
 #include "jk_tmp.h"
 #include "jk_frontend.h"
+#include "jk_controls.h"
 #include "jk_fs.h"
 #include "jk_sha256.h"
 #include "jk_savefx.h"
@@ -275,6 +276,65 @@ static void prod_ignores_devtools_and_user_ini(void)
     CHECK(tmp_get(e.game, "jk4speed-dev.ini", ini, sizeof ini) > 0);
     CHECK(strstr(ini, "DXVK_PS4_AUTOTEST=0\r\n") != NULL);
     CHECK(strstr(ini, "DXVK_PS4_TEST_KEY") == NULL);
+    tmp_rm_rf(e.root);
+}
+
+/* CONTROLS: PLAY writes Xidi.ini from the saved layout (Xidi base in the package). */
+static void play_composes_xidi_from_controls(void)
+{
+    Env e; env_new(&e, 1, 1);
+    char dst[400], st[400], buf[4096];
+    snprintf(dst, sizeof dst, "%s/Xidi.ini", e.pkg);
+    jk_fs_copy_checked(JK_ROOT_DIR "/title/config/Xidi.ini", dst, NULL);
+    snprintf(st, sizeof st, "%s/state", e.data);
+    JkControls c;
+    jk_controls_default(&c);
+    jk_controls_assign(&c, JK_ACT_GAS, JK_CB_CROSS);
+    CHECK_EQ(jk_controls_save(st, &c), 0);
+    jk_app_init(&app, &e.s, NULL);
+    press(JK_PAD_CROSS);                                   /* PLAY */
+    CHECK(app.done);
+    CHECK(tmp_get(e.game, "Xidi.ini", buf, sizeof buf) > 0);
+    CHECK(strstr(buf, "ButtonA = Button(1)") != NULL);
+    CHECK(strstr(buf, "TriggerRT = Null") != NULL);
+    tmp_rm_rf(e.root);
+}
+
+/* CONTROLS: select a function, ✕ listens, the first button pressed is taken;
+ * a function that had it is left empty; △ gives the defaults back. */
+static void controls_capture_and_reset(void)
+{
+    Env e; env_new(&e, 1, 1);
+    char st[400];
+    snprintf(st, sizeof st, "%s/state", e.data);
+    jk_app_init(&app, &e.s, NULL);
+    open_settings();
+    while (app.m.set_focus != JK_SET_CONTROLS) press(JK_PAD_DOWN);
+    press(JK_PAD_CROSS);
+    CHECK_EQ(app.m.screen, JK_SCR_CONTROLS);
+    CHECK_EQ(app.m.ctl_focus, JK_ACT_GAS);
+    press(JK_PAD_CROSS);                                   /* listen */
+    CHECK(app.m.ctl_listen);
+    press(JK_PAD_R1);                                      /* captured at once: gas on R1 */
+    CHECK(!app.m.ctl_listen);
+    CHECK_EQ(app.m.controls.btn[JK_ACT_GAS], JK_CB_R1);
+    CHECK_EQ(app.m.controls.btn[JK_ACT_SHIFT_UP], JK_CB_NONE);
+    JkControls saved;
+    jk_controls_load(st, &saved);
+    CHECK_EQ(saved.btn[JK_ACT_GAS], JK_CB_R1);
+    press(JK_PAD_DOWN);                                    /* brake */
+    press(JK_PAD_CROSS);
+    press(JK_PAD_UP);                                      /* D-pad is not a remappable button: still listening */
+    CHECK(app.m.ctl_listen);
+    press(JK_PAD_OPTIONS);                                 /* cancel */
+    CHECK(!app.m.ctl_listen);
+    CHECK_EQ(app.m.controls.btn[JK_ACT_BRAKE], JK_CB_L2);
+    press(JK_PAD_TRIANGLE);                                /* defaults */
+    CHECK(jk_controls_is_default(&app.m.controls));
+    jk_controls_load(st, &saved);
+    CHECK(jk_controls_is_default(&saved));
+    press(JK_PAD_CIRCLE);
+    CHECK_EQ(app.m.screen, JK_SCR_SETTINGS);
     tmp_rm_rf(e.root);
 }
 
@@ -1598,6 +1658,8 @@ int main(void)
     RUN(play_composes_before_start);
     RUN(devtools_flag_sets_autotest_on_play);
     RUN(prod_ignores_devtools_and_user_ini);
+    RUN(play_composes_xidi_from_controls);
+    RUN(controls_capture_and_reset);
     RUN(frame_rate_disabled_before_install);
     RUN(patch_composes_with_players_settings);
     RUN(settings_items_open_and_circle_returns);

@@ -194,6 +194,7 @@ static void sha_or_empty(const char *path, char out[65])
 static int accepted(const JkManifest *m, JkEntryKind kind, const char *rel, const char *tgt, const char *cur)
 {
     if (!strcmp(rel, COMPOSED_INI) && kind == JK_M_FILE) return cur && cur[0];
+    if (!strcmp(rel, "Xidi.ini") && kind == JK_M_FILE) return cur && cur[0];   /* composed from CONTROLS at PLAY */
     if (jk_manifest_accepts(m, rel, cur)) return 1;
     char d[65];
     return kind == JK_M_SERVER && cur && cur[0] && jk_load_digest(tgt, d) == 0 && jk_manifest_accepts(m, rel, d);

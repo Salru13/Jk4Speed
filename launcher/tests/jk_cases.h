@@ -22,6 +22,7 @@ static JkModel case_base(JkScreenId s, JkState st)
     m.screen = s;
     m.check.state = st;
     m.pace = JK_PACE_30;
+    jk_controls_default(&m.controls);
     m.build_id = "JK4SPEED 1.0";
     m.saves_profiles = -1;
     m.release.state = JK_REL_UNOFFICIAL;          /* no signing yet: what every build shows today */
@@ -175,6 +176,12 @@ static int jk_cases(JkCase *out)
 
     m = case_base(JK_SCR_CONTROLS, JK_ST_READY);
     out[n++] = (JkCase){ "controls", m };
+    /* CONTROLS: gas moved to R1 (shift up left empty), listening on brake */
+    jk_controls_assign(&m.controls, JK_ACT_GAS, JK_CB_R1);
+    m.ctl_focus = JK_ACT_BRAKE; m.ctl_listen = 1;
+    out[n++] = (JkCase){ "controls-listen", m };
+    m.ctl_listen = 0; m.ctl_focus = JK_ACT_SHIFT_UP;
+    out[n++] = (JkCase){ "controls-empty", m };
 
     m = case_base(JK_SCR_SAVES, JK_ST_READY); m.saves_profiles = 2; m.usb = 1;
     out[n++] = (JkCase){ "saves", m };

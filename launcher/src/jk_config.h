@@ -20,6 +20,7 @@
 #include <stddef.h>
 
 #include "jk_pace.h"
+#include "jk_controls.h"
 
 typedef struct JkSettings { JkPace pace; int fps_hud; int logs; } JkSettings;   /* defaults: JK_PACE_30, 0, 0 */
 
@@ -49,6 +50,9 @@ typedef struct JkConfigIn {
      * bench keys and the pace stay the launcher's. A missing file changes
      * nothing. For testing a setting without a new package. */
     const char *user_ini;
+    /* SETTINGS > CONTROLS, or NULL for the defaults: the profile's [input]
+     * key binds and Xidi.ini's button lines. */
+    const JkControls *controls;
 } JkConfigIn;
 
 /* -> <game_dir>/jk4speed-dev.ini (CRLF). 0 ok; <0 with a short reason (no
@@ -56,6 +60,10 @@ typedef struct JkConfigIn {
 int jk_config_write_ini(const JkConfigIn *in, char *why, size_t cap);
 /* -> <profiles_dir>/nfsmw.profile (LF). 0 ok; <0 with a short reason. */
 int jk_config_write_profile(const JkConfigIn *in, char *why, size_t cap);
+
+/* -> <game_dir>/Xidi.ini (0666): the package's Xidi.ini with the CustomMapper
+ * button lines of in->controls (defaults: the package file byte for byte). */
+int jk_config_write_xidi(const JkConfigIn *in, char *why, size_t cap);
 
 /* The hash last composed for which ("ini" or "profile") in <state_dir>/composed.txt.
  * 0 found; <0 none. */

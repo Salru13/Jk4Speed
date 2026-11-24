@@ -135,7 +135,9 @@ Pick what feels best to you; you can switch at any time.
 
 ## Controls
 
-DualShock 4 layout (also shown in **SETTINGS → CONTROLS**). No rebinding in this version.
+Default DualShock 4 layout. **You can change it in SETTINGS → CONTROLS:** pick a function, press ✕, then press the new
+button; it is taken at once. A function whose button you take is left as **NONE** (give it a new one). △ puts the
+default layout back. One button per function (no combinations). Options (pause), the sticks and the D-pad are fixed.
 
 | DS4 | Action |
 |---|---|

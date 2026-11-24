@@ -78,6 +78,15 @@ Supported:
 
 Turn each one on or off in **Settings > Mods**, then press **Patch**. Any mix of the three works. Turning a mod off puts your original game files back; Patch never needs the download for that. A mod that is on but whose download is gone stays installed as it is.
 
+## Controls
+
+Default layout: R2 gas, L2 brake / reverse, R1 shift up, L1 shift down, Square nitrous, Triangle speedbreaker,
+Cross handbrake / accept, Circle brake / back, R3 change camera, L3 reset car, Options pause, right stick back look behind.
+
+To change it: **Settings > Controls**, pick a function, press the cross button, then press the new button (it is taken
+at once). A function whose button you take is left as **NONE**: give it a new one. Triangle puts the default layout back.
+One button per function. Options, the sticks and the D-pad are fixed.
+
 ## Saves
 
 Your saves are in this folder, one folder per profile inside `NFS Most Wanted`:
