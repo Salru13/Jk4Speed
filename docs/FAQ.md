@@ -22,9 +22,15 @@ Choose it in **Settings > Frame rate**. **30 FPS**: races run at an even 30 fram
 
 ## How do I use mods?
 
-Mods are not part of Jk4Speed. Get each one from its author's page (Settings > Mods shows where) and put the download, unchanged and still zipped, in `/data/Jk4Speed/Mods` or `USB:/Jk4Speed`. Supported: Xbox 360 Stuff Pack v4.2, Upscaled HUD (`NFSMWUHUD01022026b.7z`) and HD Road Textures.
+Mods are not part of Jk4Speed. Get each one from its author's page (Settings > Mods shows where) and put the download, unchanged and still zipped, in `/data/Jk4Speed/Mods` or `USB:/Jk4Speed`:
 
-Then turn each mod on or off in **Settings > Mods** and press **Patch**. Any mix works.
+- **Xbox 360 Stuff Pack v4.2 (required)**: on its Google Drive page, download the whole **"Complex Installation"** folder. Google Drive gives you one or more zips; put all of them in.
+- **Upscaled HUD (optional)**: only `NFSMWUHUD01022026b.7z` (2 January 2026). Older versions are not used.
+- **HD Road Textures (optional)**: the zip from N4SRazer's page.
+
+Over FTP, use file names without spaces (the console's FTP server refuses them); Jk4Speed accepts any name.
+
+Then press **Patch**. The pack is always on; turn the HUD and the roads on or off in **Settings > Mods**.
 
 Turning a mod off puts your original game files back: Patch keeps an unchanged copy of every game file a mod replaces, so it never needs the download for that. A mod that is on but whose download is gone stays installed as it is.
 
