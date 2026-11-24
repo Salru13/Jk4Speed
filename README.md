@@ -25,9 +25,14 @@ JK4SPEED is a PS4 app with its own launcher, the Wine runtime for the console fr
     └── nfsmw-hd-road-textures.zip       <- HD Road Textures (optional)
 ```
 
-1. Install the PKG and open JK4SPEED once: it makes `/data/Jk4Speed/` and its folders.
-2. Copy your game folder into `/data/Jk4Speed/NFSMW` and the mod zips into `/data/Jk4Speed/Mods` (FTP: file names without spaces).
-3. In JK4SPEED press **PATCH**, then **PLAY**.
+1. **Install the PKG** with GoldHEN's package installer (or your usual homebrew PKG installer).
+2. **Open JK4SPEED once.** The first start shows **SETTING UP JK4SPEED** for a minute or two: it sets up the
+   Windows files and makes `/data/Jk4Speed/` with `Mods`, `Saves` and `Logs`. When you see the Home screen, close
+   JK4SPEED. Do not make these folders yourself: the names are case-sensitive (`Jk4Speed`, `Mods`).
+3. **Copy your game** (PC v1.3 Black Edition, untouched) into `/data/Jk4Speed/NFSMW`, over FTP or from a USB drive.
+   `speed.exe` must be directly in `NFSMW`.
+4. **Copy the mod downloads, still zipped,** into `/data/Jk4Speed/Mods` (over FTP: file names without spaces).
+5. **Open JK4SPEED, press PATCH, then PLAY.** The first PATCH takes a few minutes.
 
 ## Requirements
 
@@ -46,14 +51,16 @@ Get the `.pkg` from the [Releases](https://github.com/Salru13/Jk4Speed/releases)
 
 ## Getting started
 
-1. Download the JK4SPEED `.pkg` from the Releases page.
-2. Optional: check the download on a PC (see [Official builds and verification](#official-builds-and-verification)).
-3. Install the PKG on the PS4 with GoldHEN's package installer (or your usual homebrew PKG installer).
-4. Copy your game folder (PC v1.3 Black Edition, untouched) to the console with FTP or a USB drive.
-   `speed.exe` must sit directly in the game folder. The launcher shows the exact path on the **PATCH**
-   screen if it cannot find the game.
-5. Start **JK4SPEED** from the home screen. The first start shows **SETTING UP JK4SPEED** for about a minute or two
-   (the Windows files the game needs are copied to `/data/Jk4Speed/System`). This happens once.
+Download the `.pkg` from the Releases page (optional: check it on a PC, see [Official builds and verification](#official-builds-and-verification)), then:
+
+1. **Install the PKG** with GoldHEN's package installer (or your usual homebrew PKG installer).
+2. **Open JK4SPEED once.** The first start shows **SETTING UP JK4SPEED** for a minute or two: it sets up the
+   Windows files and makes `/data/Jk4Speed/` with `Mods`, `Saves` and `Logs`. When you see the Home screen, close
+   JK4SPEED. Do not make these folders yourself: the names are case-sensitive (`Jk4Speed`, `Mods`).
+3. **Copy your game** (PC v1.3 Black Edition, untouched) into `/data/Jk4Speed/NFSMW`, over FTP or from a USB drive.
+   `speed.exe` must be directly in `NFSMW`.
+4. **Copy the mod downloads, still zipped,** into `/data/Jk4Speed/Mods` (over FTP: file names without spaces).
+5. **Open JK4SPEED, press PATCH, then PLAY.** The first PATCH takes a few minutes.
 
 ## The launcher: PLAY, PATCH, SETTINGS
 
