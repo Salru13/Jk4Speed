@@ -1,5 +1,5 @@
 ; Jk4Speed profile template for NFS Most Wanted (2005, PC v1.3).
-; The game folder is Z:\data\Jk4Speed\NFSMW on the PS4. DRAFT: Jk4Speed is in development.
+; The game folder is Z:\data\Jk4Speed\NFSMW on the PS4.
 [application]
 id = nfsmw
 name = NFS Most Wanted

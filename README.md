@@ -178,6 +178,8 @@ above. Forks are welcome under the code licences, but they must not call themsel
 
 Copy the whole game folder of Most Wanted PC v1.3 Black Edition into `/data/Jk4Speed/NFSMW`, over FTP or with a USB drive. `speed.exe` must be directly in this folder, not in a folder inside it. Upper or lower case does not matter. Then open Patch and press the cross button to install. Only use a copy of Most Wanted you own.
 
+Folder names on the PS4 are case-sensitive: use exactly `/data/Jk4Speed` (capital J and S). `/data/Jk4speed` or `/data/jk4speed` is a different folder that JK4SPEED does not read. The easiest way: open JK4SPEED once first; it makes `/data/Jk4Speed/` with `Mods`, `Saves` and `Logs` for you. Only the game folder `NFSMW` may be written in any case (`nfsmw` works too), and the mod zip names can be anything.
+
 ### Game not found
 
 The folder must be `/data/Jk4Speed/NFSMW`, with `speed.exe` directly in it.
