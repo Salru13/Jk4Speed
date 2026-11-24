@@ -1,25 +1,26 @@
-Jk4Speed for PS4: where the source is
+JK4SPEED for PS4: where the source is
 =====================================
 
-DRAFT - OWNER DECISION. Jk4Speed is in development and nothing is
-published yet. This file is filled in when the first package is built.
+JK4SPEED 1.0 (package IV0000-JKSP00001_00-JK4SPEED00000001).
 
-Wine and the Wine PS4 runtime (with our changes) are licensed under the
-GNU Lesser General Public License 2.1 or later (LICENSES/LGPL-2.1.txt).
+This repository
+  launcher/   the JK4SPEED launcher (PLAY / PATCH / SETTINGS, the mod
+              patcher, save tools, the release badge), LGPL-2.1-or-later
+  title/      how the title is built from the Wine PS4 runtime and the
+              launcher, and how the package is made and signed
+  probe/, templates/   pre-flight probe, profile and registry templates
 
-Jk4Speed uses the Wine PS4 runtime of JkFlow 1.00. Its source, with our
-changes, is published with JkFlow:
+The Wine PS4 runtime
+  JK4SPEED uses the Wine PS4 runtime of JkFlow 1.00 (LGPL-2.1-or-later).
+  Its source, with the changes, is published with JkFlow:
+    https://github.com/Salru13/JkFlow (tag v1.00): wine/, title/, mesa/
 
-  https://github.com/Salru13/JkFlow (tag v1.00): wine/, title/, mesa/
-
-Changes made for Jk4Speed (to be listed with the first package):
-  - the Wine runtime: none yet
-  - Native DXVK client d3d9.c988.dll: OWNER DECISION whether its source is
-    published (see LICENSE)
+The native DXVK client (d3d9.dll)
+  Our build of DXVK 1.10.3 for the PS4 renderer path. DXVK is under the
+  zlib licence (LICENSES/DXVK-zlib.txt), which does not require the source
+  of changes to be published. It is not published at this time.
 
 Upstream projects
   Wine:  https://gitlab.winehq.org/wine/wine
   DXVK:  https://github.com/doitsujin/dxvk
   Mesa:  https://gitlab.freedesktop.org/mesa/mesa
-  The Wine console ports: https://github.com/plastikman/orbis-win and the
-  repositories listed in JkFlow's SOURCES.txt.

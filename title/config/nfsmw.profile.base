@@ -1,0 +1,22 @@
+; NFS Most Wanted with the Xbox 360 Stuff Pack. The launcher adds executable, working_directory,
+; prefix and the [debug] section when it writes the profile (jk_config.c).
+; [input]: l1 = ctrl, r1 = shift (keyboard Shift Down / Shift Up; the game has no pad binding for
+; shifting), r3 = c (Change Camera View). All other pad controls go through Xidi.
+[application]
+id = nfsmw
+name = NFS Most Wanted
+dll_overrides = d3d9=n;dinput8=n,b
+runtime = wine-wow64
+architecture = pe32
+graphics = dxvk
+[display]
+desktop = 1920x1080
+scaling = fit
+[input]
+mode = xinput
+l1 = ctrl
+r1 = shift
+r3 = c
+[runtime]
+fast_clock = true
+cpu = native

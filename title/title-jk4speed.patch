@@ -1,0 +1,173 @@
+--- a/prospero/native/wine64_main.c
++++ b/prospero/native/wine64_main.c
+@@ -24,6 +24,22 @@
+  * launcher: started with no game it starts its one profile, and where the
+  * title would go back to the launcher it closes, to the console's home.
+  */
++/* JK4SPEED title (launcher/title/title-jk4speed.patch): the Jk4Speed launcher
++ * replaces the profile list, PLAY starts the nfsmw profile, the launcher's
++ * loader is drawn until the game's first frame (which also clears the "game
++ * didn't start" marker), and the Blur direct mode of this tree is off.
++ * r4: everything under /data/Jk4Speed, like JkFlow's /data/JkFlow. The Wine
++ * library root (profiles/, prefix/, cache/, control/) is System; the session
++ * logs go to /data/Jk4Speed/Logs (pw_diagnostics.c makes <root>/Logs); the
++ * title never writes /data/prospero-win. */
++#define JK4SPEED_TITLE 1
++#include "jk_loader.h"
++#include "jk_session.h"
++#define JK_TITLE_PRODUCT_ROOT "/data/Jk4Speed"
++#define JK_TITLE_DATA_ROOT "/data/Jk4Speed/System"
++#define JK_TITLE_PROFILE_ID "nfsmw"
++#define PW_WINE64_ROOT_DATA JK_TITLE_DATA_ROOT
++static void jk_title_layout(void);   /* jk_title_host.inc: r3 state aside, the r4 folders */
+ #include "ps5log/ps5log.h"
+ #include "pw_diagnostics.h"
+ #undef PS5LOG_LOG
+@@ -599,6 +615,10 @@
+ {
+     if (loading->content) return;
+     loading->content = 1;
++#ifdef JK4SPEED_TITLE
++    if (strcmp(by, "no-memory")) jk_session_first_frame(JK_TITLE_DATA_ROOT);
++    jk_loader_release();
++#endif
+     PS5LOG_LOG("PW_WINE64 loading done by=%s spinner_steps=%u", by, loading->step);
+ }
+ 
+@@ -609,6 +629,24 @@
+     if (loading->content || now - started < PW_WINE64_SPINNER_DELAY_MS * 1000000ull ||
+         now < loading->next_ns)
+         return NULL;
++#ifdef JK4SPEED_TITLE
++    if (!loading->pixels) {
++        void *pixels = mmap(NULL, (size_t)JK_W * JK_H * 4, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
++        if (pixels == MAP_FAILED) {
++            loading_done(loading, "no-memory");
++            return NULL;
++        }
++        loading->pixels = pixels;
++    }
++    {
++        JkFrame jf = { (uint8_t *)loading->pixels, JK_W, JK_H, JK_W * 4 };
++        jk_loader_draw(&jf, (now - started) / 1000000ull);
++    }
++    loading->step++;
++    loading->next_ns = now + 33000000ull;
++    *frame = (PwPresentFrame){ (const uint8_t *)loading->pixels, JK_W, JK_H, JK_W * 4, PW_PRESENT_BGRX8 };
++    return frame;
++#endif
+     if (!loading->pixels) {
+         void *pixels = mmap(NULL, (size_t)PW_SPINNER_WIDTH * PW_SPINNER_HEIGHT * 4,
+                             PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
+@@ -845,6 +883,9 @@
+      * it off. Only the lines before this point are missed (2026-11-06). */
+     if (status == 0 && !ps5log_enabled()) {
+         static const char *const late_paths[] = {
++#ifdef JK4SPEED_TITLE
++            "/data/Jk4Speed/devtools/dev.conf",
++#endif
+             "/data/prospero-win/dev.conf",
+             "/data/homebrew/dev.conf",
+         };
+@@ -864,6 +905,11 @@
+                mount.helper_errno, mount.data_after, mount.elevated_after, mount.waited_ms,
+                mount.settled_ms, status == 0 ? library_root : "unavailable");
+     if (status != 0) return -1;
++#ifdef JK4SPEED_TITLE
++    /* r4: r3's state aside and the /data/Jk4Speed folders, before the session
++     * log opens; the Wine prefix is seeded by the launcher at PATCH (jk_seed). */
++    jk_title_layout();
++#else
+     {   /* Task 245: import the package's hash-pinned Blur seed into the library
+          * root before profiles are read (native245_seed.h). Every outcome is
+          * logged; none stops the launcher, and a refusal leaves /data untouched. */
+@@ -876,6 +922,7 @@
+                    seed.kept, seed.bytes_copied, (unsigned long long)((now_ns() - seed_started) / 1000000u),
+                    seed.seed_root[0] ? seed.seed_root : "-", seed.detail[0] ? seed.detail : "-");
+     }
++#endif
+     status = pw_wine_library_load(&library, library_root);
+     catalog_count = 0;
+     for (uint32_t i = 0; i < library.count; i++) {
+@@ -930,11 +977,18 @@
+            (unsigned long long)(usage.ru_utime.tv_usec + usage.ru_stime.tv_usec) / 1000u;
+ }
+ 
++#ifdef JK4SPEED_TITLE
++#include "jk_title_host.inc"
++#endif
++
+ /* ---- launcher ----------------------------------------------------------- */
+ 
+ /* Shown until a game is chosen; Wine is not loaded. Does not return. */
+ static void run_launcher(void)
+ {
++#ifdef JK4SPEED_TITLE
++    jk_title_launcher();   /* does not return */
++#endif
+     PwRemoteControl remote;
+     pw_rc_init(&remote, library_root, "launcher", "", now_ns());
+     static PwVideoOutPs5 video;
+@@ -1588,14 +1642,22 @@
+         leave_to_home("data-helper-incomplete");
+     }
+     /* Maintenance is sampled once per process, after the data grant. */
++#ifdef JK4SPEED_TITLE
++    direct_maintenance = 1;
++#else
+     direct_maintenance = access("/data/prospero-win/blur-maintenance", F_OK) == 0;
++#endif
+     if (!direct_maintenance) {
+         direct_start_screen();
+         if (direct_init(&launch) != 0) leave_to_home("blur-direct-profile-invalid");
+     } else {
+         (void)pw_wine_launch_parse(argc, argv, catalog, catalog_count, &launch);
+     }
++#ifdef JK4SPEED_TITLE
++    (void)pw_diagnostics_open(JK_TITLE_PRODUCT_ROOT, PW_BUILD_ID,   /* -> /data/Jk4Speed/Logs */
++#else
+     (void)pw_diagnostics_open(library_root, PW_BUILD_ID,
++#endif
+                               launch.app ? launch.app->id : "launcher", launch.cycle);
+     /* The package's own identity (title, APP_VER, commit), defined by
+      * scripts/build-app-ps4.sh, so every run is attributable from its log. */
+--- a/prospero/native/pw_diagnostics.c
++++ b/prospero/native/pw_diagnostics.c
+@@ -249,7 +249,8 @@
+     wait_for_writer();
+     if (fd >= 0) { close(fd); fd = -1; }
+     disk_error = 0;
+-    if (!root || snprintf(directory, sizeof(directory), "%s/logs", root) >= (int)sizeof(directory)) {
++    /* JK4SPEED r4: the session ring is <root>/Logs, i.e. /data/Jk4Speed/Logs (title-jk4speed.patch) */
++    if (!root || snprintf(directory, sizeof(directory), "%s/Logs", root) >= (int)sizeof(directory)) {
+         disk_error = ENAMETOOLONG; goto out;
+     }
+     /* ⚠ 0777/0666 and chmod (archive 0008): the logs are read over FTP, and
+--- a/orbis/src/native/pw_wow_log_ps4.c
++++ b/orbis/src/native/pw_wow_log_ps4.c
+@@ -24,10 +24,12 @@
+ #include <string.h>
+ #include <unistd.h>
+ 
+-/* Beside the title's own session logs. prospero-win makes that directory, and
+- * both are pulled off with scripts/ftp-get.py. */
+-#define PW_WOW_LOG_DIR  "/data/prospero-win/logs"
+-#define PW_WOW_LOG_PATH PW_WOW_LOG_DIR "/wowprospero.log"
++/* Beside the title's own session logs. JK4SPEED r4 (title-jk4speed.patch):
++ * those are /data/Jk4Speed/Logs, and the title writes nothing under
++ * /data/prospero-win. */
++#define PW_WOW_LOG_ROOT "/data/Jk4Speed"
++#define PW_WOW_LOG_DIR  PW_WOW_LOG_ROOT "/Logs"
++#define PW_WOW_LOG_PATH PW_WOW_LOG_DIR "/wow64cpu.log"
+ 
+ int sceKernelDebugOutText(int channel, const char *text);
+ 
+@@ -52,7 +54,7 @@
+      * so anything it makes 0700 cannot be read off the console afterwards --
+      * which is exactly how the title's own session logs ended up unreadable. */
+     if ((fd = open(PW_WOW_LOG_PATH, O_WRONLY | O_CREAT | O_APPEND, 0666)) < 0) {
+-        (void)mkdir("/data/prospero-win", 0777);
++        (void)mkdir(PW_WOW_LOG_ROOT, 0777);
+         (void)mkdir(PW_WOW_LOG_DIR, 0777);
+         (void)chmod(PW_WOW_LOG_DIR, 0777);
+         if ((fd = open(PW_WOW_LOG_PATH, O_WRONLY | O_CREAT | O_APPEND, 0666)) < 0) return;

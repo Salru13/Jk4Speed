@@ -1,0 +1,438 @@
+/* SPDX-License-Identifier: LGPL-2.1-or-later */
+/* Copyright 2026 XxXJoker13XxX and contributors */
+/* The release config: settings file, composed jk4speed-dev.ini and nfsmw.profile, Clear logs. */
+#include <sys/stat.h>
+#include "jk_test.h"
+#include "jk_tmp.h"
+#include "jk_config.h"
+#include "jk_fs.h"
+
+#define BASE_DIR JK_ROOT_DIR "/title/config"
+
+static void cfg_in(JkConfigIn *in, const char *root, const char *files)
+{
+    static char game[300], prof[300], cache[300], logs[300];
+    snprintf(game, sizeof game, "%s", "/data/Jk4Speed/NFSMW");
+    snprintf(prof, sizeof prof, "%s/profiles", root);
+    snprintf(cache, sizeof cache, "%s", "/data/Jk4Speed/System/cache");
+    snprintf(logs, sizeof logs, "%s", "/data/Jk4Speed/Logs");
+    memset(in, 0, sizeof *in);
+    in->files_dir = files;
+    in->game_dir = game;
+    in->profiles_dir = prof;
+    in->cache_dir = cache;
+    in->logs_dir = logs;
+}
+
+/* A config input whose game and profiles folders really exist under root. */
+static void cfg_real(JkConfigIn *in, const char *root, const char *files)
+{
+    static char game[300];
+    snprintf(game, sizeof game, "%s/game", root);
+    mkdir(game, 0755);
+    cfg_in(in, root, files);
+    in->game_dir = game;
+    mkdir(in->profiles_dir, 0755);
+}
+
+static int has_line(const char *text, const char *line)
+{
+    size_t n = strlen(line);
+    for (const char *p = text; *p;) {
+        const char *e = strpbrk(p, "\r\n");
+        size_t len = e ? (size_t)(e - p) : strlen(p);
+        if (len == n && !strncmp(p, line, n)) return 1;
+        if (!e) break;
+        p = e + 1;
+    }
+    return 0;
+}
+
+static int read_into(const char *dir, const char *name, char *buf, size_t cap)
+{
+    char path[512];
+    snprintf(path, sizeof path, "%s/%s", dir, name);
+    size_t len = 0;
+    char *t = jk_fs_read(path, 65536, &len);
+    if (!t) return -1;
+    snprintf(buf, cap, "%s", t);
+    free(t);
+    return (int)len;
+}
+
+static int read_ini(const JkConfigIn *in, char *buf, size_t cap) { return read_into(in->game_dir, "jk4speed-dev.ini", buf, cap); }
+static int read_profile(const JkConfigIn *in, char *buf, size_t cap) { return read_into(in->profiles_dir, "nfsmw.profile", buf, cap); }
+
+static void settings_defaults_off(void)
+{
+    char d[256];
+    tmp_dir(d, sizeof d);
+    JkSettings s = { JK_PACE_60, 1, 1 };
+    CHECK_EQ(jk_settings_load(d, &s), 0);
+    CHECK_EQ(s.pace, JK_PACE_30);
+    CHECK_EQ(s.fps_hud, 0);
+    CHECK_EQ(s.logs, 0);
+    JkSettings t = { JK_PACE_60, 1, 1 };
+    CHECK_EQ(jk_settings_load("/nonexistent/folder", &t), 0);    /* a missing folder is the same as a missing file */
+    CHECK_EQ(t.pace, JK_PACE_30);
+    CHECK_EQ(t.fps_hud, 0);
+    tmp_put(d, "launcher.ini", "pace=45\nfps_hud=7\nlogs=yes\n");
+    CHECK_EQ(jk_settings_load(d, &s), 0);                        /* nonsense falls back to the defaults */
+    CHECK_EQ(s.pace, JK_PACE_30);
+    CHECK_EQ(s.fps_hud, 0);
+    CHECK_EQ(s.logs, 0);
+    tmp_rm_rf(d);
+}
+
+static void settings_roundtrip(void)
+{
+    char d[256], sub[300];
+    tmp_dir(d, sizeof d);
+    snprintf(sub, sizeof sub, "%s/state", d);                    /* the state folder may not exist yet */
+    JkSettings a = { JK_PACE_60, 1, 1 }, b = { JK_PACE_30, 0, 0 };
+    CHECK_EQ(jk_settings_save(sub, &a), 0);
+    CHECK_EQ(jk_settings_load(sub, &b), 0);
+    CHECK_EQ(b.pace, JK_PACE_60);
+    CHECK_EQ(b.fps_hud, 1);
+    CHECK_EQ(b.logs, 1);
+    JkSettings c = { JK_PACE_30, 1, 0 }, e = { JK_PACE_60, 0, 1 };
+    CHECK_EQ(jk_settings_save(sub, &c), 0);
+    CHECK_EQ(jk_settings_load(sub, &e), 0);
+    CHECK_EQ(e.pace, JK_PACE_30);
+    CHECK_EQ(e.fps_hud, 1);
+    CHECK_EQ(e.logs, 0);
+    tmp_rm_rf(d);
+}
+
+static void release_ini_has_every_bench_key_zero(void)
+{
+    char d[256], buf[8192];
+    tmp_dir(d, sizeof d);
+    JkConfigIn in;
+    cfg_real(&in, d, BASE_DIR);
+    char why[200] = "";
+    CHECK_EQ(jk_config_write_ini(&in, why, sizeof why), 0);
+    CHECK(read_ini(&in, buf, sizeof buf) > 0);
+    int n = 0;
+    for (int i = 0; JK_BENCH_KEYS[i]; i++, n++) {
+        char line[96];
+        snprintf(line, sizeof line, "%s=0", JK_BENCH_KEYS[i]);
+        CHECK(has_line(buf, line));
+    }
+    CHECK_EQ(n, 7);
+    CHECK(has_line(buf, "DXVK_PS4_NFS_PACE=30"));
+    CHECK(has_line(buf, "[jk4speed]"));
+    CHECK(has_line(buf, "DXVK_PS4_NFS_WORLD_LOD=1"));            /* the base's own keys stay */
+    CHECK(strstr(buf, "DXVK_PS4_DIAG") == NULL);
+    CHECK(strstr(buf, "\r\n") != NULL);
+    for (const char *p = buf; (p = strchr(p, '\n')); p++) CHECK(p > buf && p[-1] == '\r');   /* CRLF only */
+    tmp_rm_rf(d);
+}
+
+static void ini_pace_60(void)
+{
+    char d[256], buf[8192];
+    tmp_dir(d, sizeof d);
+    JkConfigIn in;
+    cfg_real(&in, d, BASE_DIR);
+    in.set.pace = JK_PACE_60;
+    char why[200];
+    CHECK_EQ(jk_config_write_ini(&in, why, sizeof why), 0);
+    CHECK(read_ini(&in, buf, sizeof buf) > 0);
+    CHECK(has_line(buf, "DXVK_PS4_NFS_PACE=60"));
+    CHECK(!has_line(buf, "DXVK_PS4_NFS_PACE=30"));
+    tmp_rm_rf(d);
+}
+
+/* r5: <product_root>/jk4speed-user.ini (owner's test file): a key there wins
+ * over the base, a new key is added, bench keys and the pace stay the
+ * launcher's; the composed ini is 0666 (FTP can replace it). */
+static void user_ini_overrides(void)
+{
+    char d[256], buf[8192], u[400];
+    tmp_dir(d, sizeof d);
+    JkConfigIn in;
+    cfg_real(&in, d, BASE_DIR);
+    tmp_put(d, "user/jk4speed-user.ini", "; my tests\r\n[x]\r\ndxvk_ps4_nfs_shadows_nv = 1\r\nDXVK_PS4_NEW_KEY=7\r\n"
+            "DXVK_PS4_AUTOTEST=1\r\nDXVK_PS4_NFS_PACE=60\r\n");
+    snprintf(u, sizeof u, "%s/user/jk4speed-user.ini", d);
+    in.user_ini = u;
+    char why[200];
+    CHECK_EQ(jk_config_write_ini(&in, why, sizeof why), 0);
+    CHECK(read_ini(&in, buf, sizeof buf) > 0);
+    CHECK(has_line(buf, "dxvk_ps4_nfs_shadows_nv = 1"));
+    CHECK(!has_line(buf, "DXVK_PS4_NFS_SHADOWS_NV=0"));
+    CHECK(has_line(buf, "DXVK_PS4_NEW_KEY=7"));
+    CHECK(has_line(buf, "DXVK_PS4_AUTOTEST=0"));             /* bench key: the launcher's */
+    CHECK(has_line(buf, "DXVK_PS4_NFS_PACE=30"));            /* the pace: SETTINGS */
+    char path[400];
+    struct stat st;
+    snprintf(path, sizeof path, "%s/jk4speed-dev.ini", in.game_dir);
+    CHECK(stat(path, &st) == 0 && (st.st_mode & 0777) == 0666);
+    in.user_ini = NULL;                                      /* no file: the base as it is */
+    CHECK_EQ(jk_config_write_ini(&in, why, sizeof why), 0);
+    CHECK(read_ini(&in, buf, sizeof buf) > 0);
+    CHECK(has_line(buf, "DXVK_PS4_NFS_SHADOWS_NV=0"));
+    tmp_rm_rf(d);
+}
+
+static void ini_logs_on_sets_frame_log_only(void)
+{
+    char d[256], buf[8192];
+    tmp_dir(d, sizeof d);
+    JkConfigIn in;
+    cfg_real(&in, d, BASE_DIR);
+    in.set.logs = 1;
+    char why[200];
+    CHECK_EQ(jk_config_write_ini(&in, why, sizeof why), 0);
+    CHECK(read_ini(&in, buf, sizeof buf) > 0);
+    CHECK(has_line(buf, "DXVK_PS4_FRAME_LOG=1"));
+    CHECK(!has_line(buf, "DXVK_PS4_FRAME_LOG=0"));
+    CHECK(has_line(buf, "DXVK_PS4_AUTOTEST=0"));
+    CHECK(has_line(buf, "DXVK_PS4_NFS_TIMING=0"));
+    CHECK(has_line(buf, "DXVK_PS4_NFS_GTPROF=0"));
+    CHECK(has_line(buf, "DXVK_PS4_CS_PROFILE=0"));
+    CHECK(has_line(buf, "DXVK_PS4_RACE_LOCK=0"));
+    CHECK(has_line(buf, "DXVK_PS4_NATIVE_PIN_STAMP=0"));
+    tmp_rm_rf(d);
+}
+
+static void ini_devtools_sets_autotest(void)
+{
+    char d[256], buf[8192];
+    tmp_dir(d, sizeof d);
+    JkConfigIn in;
+    cfg_real(&in, d, BASE_DIR);
+    in.devtools = 1;
+    char why[200];
+    CHECK_EQ(jk_config_write_ini(&in, why, sizeof why), 0);
+    CHECK(read_ini(&in, buf, sizeof buf) > 0);
+    CHECK(has_line(buf, "DXVK_PS4_AUTOTEST=1"));
+    CHECK(!has_line(buf, "DXVK_PS4_AUTOTEST=0"));
+    CHECK(has_line(buf, "DXVK_PS4_FRAME_LOG=0"));
+    tmp_rm_rf(d);
+}
+
+static void ini_strips_bench_key_from_base(void)
+{
+    char d[256], files[300], buf[8192];
+    tmp_dir(d, sizeof d);
+    snprintf(files, sizeof files, "%s/files", d);
+    tmp_put(files, "jk4speed.ini.base",
+            "[jk4speed]\r\nDXVK_PS4_AUTOTEST=1\r\nKEEP=1\r\ndxvk_ps4_nfs_timing = 1\r\nDXVK_PS4_NFS_PACE=60\r\nDXVK_PS4_NATIVE_PIN_STAMP=1\r\n");
+    JkConfigIn in;
+    cfg_real(&in, d, files);
+    char why[200];
+    CHECK_EQ(jk_config_write_ini(&in, why, sizeof why), 0);
+    CHECK(read_ini(&in, buf, sizeof buf) > 0);
+    CHECK(has_line(buf, "DXVK_PS4_AUTOTEST=0"));
+    CHECK(has_line(buf, "DXVK_PS4_NFS_TIMING=0"));
+    CHECK(has_line(buf, "DXVK_PS4_NATIVE_PIN_STAMP=0"));
+    CHECK(has_line(buf, "DXVK_PS4_NFS_PACE=30"));
+    CHECK(has_line(buf, "KEEP=1"));
+    const char *p = buf;
+    int ones = 0;
+    while ((p = strstr(p, "=1\r\n"))) { ones++; p++; }
+    CHECK_EQ(ones, 1);                                           /* only KEEP is left at 1 */
+    CHECK(strstr(buf, "=60") == NULL);
+    CHECK(strstr(buf, "dxvk_ps4_nfs_timing") == NULL);
+    tmp_rm_rf(d);
+}
+
+static void ini_without_base_fails_and_writes_nothing(void)
+{
+    char d[256], why[200] = "";
+    tmp_dir(d, sizeof d);
+    JkConfigIn in;
+    cfg_real(&in, d, "/nonexistent/files");
+    CHECK(jk_config_write_ini(&in, why, sizeof why) < 0);
+    CHECK(why[0] != 0);
+    CHECK(!tmp_exists(in.game_dir, "jk4speed-dev.ini"));
+    tmp_rm_rf(d);
+}
+
+static void profile_release_has_no_diag_no_trace(void)
+{
+    char d[256], buf[8192];
+    tmp_dir(d, sizeof d);
+    JkConfigIn in;
+    cfg_real(&in, d, BASE_DIR);
+    char why[200];
+    CHECK_EQ(jk_config_write_profile(&in, why, sizeof why), 0);
+    CHECK(read_profile(&in, buf, sizeof buf) > 0);
+    CHECK(has_line(buf, "[debug]"));
+    CHECK(has_line(buf, "winedebug = -all"));
+    CHECK(has_line(buf, "env = DXVK_PS4_FPS_HUD=0"));
+    CHECK(has_line(buf, "env = DXVK_LOG_LEVEL=none"));
+    CHECK(has_line(buf, "env = PW_NATIVE_ALERT_UMTX=1"));
+    CHECK(has_line(buf, "env = DXVK_PS4_NATIVE_SERVER_CPU=38"));
+    CHECK(has_line(buf, "env = DXVK_STATE_CACHE_PATH=/data/Jk4Speed/System/cache"));
+    CHECK(strstr(buf, "DXVK_PS4_DIAG") == NULL);
+    CHECK(strstr(buf, "DXVK_PS4_LOG_DIR") == NULL);
+    CHECK(strstr(buf, "prospero") == NULL);
+    CHECK(has_line(buf, "id = nfsmw"));
+    CHECK(has_line(buf, "name = NFS Most Wanted"));
+    CHECK(has_line(buf, "prefix = default"));
+    CHECK(has_line(buf, "r3 = c"));
+    CHECK(strchr(buf, '\r') == NULL);
+    tmp_rm_rf(d);
+}
+
+static void profile_fps_on(void)
+{
+    char d[256], buf[8192];
+    tmp_dir(d, sizeof d);
+    JkConfigIn in;
+    cfg_real(&in, d, BASE_DIR);
+    in.set.fps_hud = 1;
+    char why[200];
+    CHECK_EQ(jk_config_write_profile(&in, why, sizeof why), 0);
+    CHECK(read_profile(&in, buf, sizeof buf) > 0);
+    CHECK(has_line(buf, "env = DXVK_PS4_FPS_HUD=fps"));
+    CHECK(!has_line(buf, "env = DXVK_PS4_FPS_HUD=0"));
+    tmp_rm_rf(d);
+}
+
+static void profile_logs_on(void)
+{
+    char d[256], buf[8192];
+    tmp_dir(d, sizeof d);
+    JkConfigIn in;
+    cfg_real(&in, d, BASE_DIR);
+    in.set.logs = 1;
+    char why[200];
+    CHECK_EQ(jk_config_write_profile(&in, why, sizeof why), 0);
+    CHECK(read_profile(&in, buf, sizeof buf) > 0);
+    CHECK(has_line(buf, "env = DXVK_PS4_LOG_DIR=/data/Jk4Speed/Logs"));
+    CHECK(has_line(buf, "env = DXVK_LOG_LEVEL=info"));
+    CHECK(has_line(buf, "winedebug = +tid,err+all,+loaddll"));
+    CHECK(strstr(buf, "DXVK_PS4_DIAG") == NULL);
+    tmp_rm_rf(d);
+}
+
+static void profile_game_dir_in_windows_form(void)
+{
+    char d[256], buf[8192];
+    tmp_dir(d, sizeof d);
+    JkConfigIn in;
+    cfg_real(&in, d, BASE_DIR);
+    in.game_dir = "/data/Jk4Speed/NFSMW";                        /* the profile only names it; nothing is written there */
+    char why[200];
+    CHECK_EQ(jk_config_write_profile(&in, why, sizeof why), 0);
+    CHECK(read_profile(&in, buf, sizeof buf) > 0);
+    CHECK(has_line(buf, "executable = Z:\\data\\Jk4Speed\\NFSMW\\speed.exe"));
+    CHECK(has_line(buf, "working_directory = Z:\\data\\Jk4Speed\\NFSMW"));
+    tmp_rm_rf(d);
+}
+
+static void profile_strips_launcher_owned_keys_from_base(void)
+{
+    char d[256], files[300], buf[8192];
+    tmp_dir(d, sizeof d);
+    snprintf(files, sizeof files, "%s/files", d);
+    tmp_put(files, "nfsmw.profile.base",
+            "[application]\nid = nfsmw\nname = NFS Most Wanted\nexecutable = C:\\old.exe\nworking_directory = C:\\old\nprefix = nfsmw\n"
+            "[input]\nr3 = c\n[debug]\nwinedebug = +all\nenv = DXVK_PS4_DIAG=2\n");
+    JkConfigIn in;
+    cfg_real(&in, d, files);
+    char why[200];
+    CHECK_EQ(jk_config_write_profile(&in, why, sizeof why), 0);
+    CHECK(read_profile(&in, buf, sizeof buf) > 0);
+    CHECK(strstr(buf, "old") == NULL);
+    CHECK(strstr(buf, "DXVK_PS4_DIAG") == NULL);
+    CHECK(strstr(buf, "+all\n") == NULL);
+    CHECK(has_line(buf, "winedebug = -all"));
+    CHECK(has_line(buf, "prefix = default"));
+    CHECK(has_line(buf, "r3 = c"));
+    tmp_rm_rf(d);
+}
+
+static void logs_clear_only_logs_dir(void)
+{
+    char d[256], logs[300], buf[16];
+    tmp_dir(d, sizeof d);
+    snprintf(logs, sizeof logs, "%s/Logs", d);
+    tmp_put(logs, "session-1.log", "x");
+    tmp_put(logs, "session-2.log", "y");
+    tmp_put(logs, "support/2026-11-17_2105/MANIFEST.txt", "m");
+    tmp_put(logs, "support/2026-11-17_2105/deep/a.log", "a");
+    tmp_put(d, "System/state/launcher.log", "keep");
+    tmp_put(d, "Saves/save.dat", "keep");
+    tmp_put(d, "NFSMW/speed.exe", "keep");
+    CHECK_EQ(jk_logs_clear(logs), 4);
+    CHECK(!tmp_exists(logs, "session-1.log"));
+    CHECK(!tmp_exists(logs, "session-2.log"));
+    CHECK(!tmp_exists(logs, "support/2026-11-17_2105/MANIFEST.txt"));
+    CHECK(!tmp_exists(logs, "support/2026-11-17_2105/deep/a.log"));
+    CHECK(tmp_exists(logs, "support"));                          /* the folders Logs and Logs/support stay */
+    CHECK(tmp_get(d, "System/state/launcher.log", buf, sizeof buf) > 0);
+    CHECK(tmp_get(d, "Saves/save.dat", buf, sizeof buf) > 0);
+    CHECK(tmp_get(d, "NFSMW/speed.exe", buf, sizeof buf) > 0);
+    CHECK_EQ(jk_logs_clear(logs), 0);                            /* nothing left */
+    CHECK_EQ(jk_logs_clear("/nonexistent/Logs"), 0);
+    CHECK_EQ(jk_logs_clear(NULL), -1);
+    tmp_rm_rf(d);
+}
+
+/* Lead ruling (Task 8): a jk4speed-dev.ini that was there before us (the
+ * bench's) is copied once to <backup_dir>/jk4speed-dev.ini before the first
+ * compose; a file we composed ourselves is never backed up, and an existing
+ * backup is never replaced. */
+static void foreign_ini_backed_up_once(void)
+{
+    char d[256], buf[8192], backup[300];
+    tmp_dir(d, sizeof d);
+    snprintf(backup, sizeof backup, "%s/System/backup", d);
+    JkConfigIn in;
+    cfg_real(&in, d, BASE_DIR);
+    in.backup_dir = backup;
+    char why[200] = "";
+    tmp_put(in.game_dir, "jk4speed-dev.ini", "[jk4speed]\r\nDXVK_PS4_DIAG=2\r\n");   /* the bench's own ini */
+    CHECK_EQ(jk_config_write_ini(&in, why, sizeof why), 0);
+    CHECK(read_into(backup, "jk4speed-dev.ini", buf, sizeof buf) > 0);
+    CHECK(!strcmp(buf, "[jk4speed]\r\nDXVK_PS4_DIAG=2\r\n"));
+    CHECK(read_ini(&in, buf, sizeof buf) > 0 && has_line(buf, "DXVK_PS4_NFS_PACE=30"));
+    /* a second compose with other settings: the backup keeps the bench's bytes */
+    in.set.pace = JK_PACE_60;
+    in.set.logs = 1;
+    CHECK_EQ(jk_config_write_ini(&in, why, sizeof why), 0);
+    CHECK(read_into(backup, "jk4speed-dev.ini", buf, sizeof buf) > 0);
+    CHECK(!strcmp(buf, "[jk4speed]\r\nDXVK_PS4_DIAG=2\r\n"));
+    tmp_rm_rf(d);
+
+    /* no ini before us: our own composes never make a backup */
+    tmp_dir(d, sizeof d);
+    snprintf(backup, sizeof backup, "%s/System/backup", d);
+    cfg_real(&in, d, BASE_DIR);
+    in.backup_dir = backup;
+    CHECK_EQ(jk_config_write_ini(&in, why, sizeof why), 0);
+    in.set.pace = JK_PACE_60;
+    in.devtools = 1;
+    CHECK_EQ(jk_config_write_ini(&in, why, sizeof why), 0);
+    in.set.pace = JK_PACE_30;
+    in.devtools = 0;
+    CHECK_EQ(jk_config_write_ini(&in, why, sizeof why), 0);
+    CHECK(read_into(backup, "jk4speed-dev.ini", buf, sizeof buf) < 0);
+    tmp_rm_rf(d);
+}
+
+int main(void)
+{
+    RUN(settings_defaults_off);
+    RUN(settings_roundtrip);
+    RUN(release_ini_has_every_bench_key_zero);
+    RUN(ini_pace_60);
+    RUN(ini_logs_on_sets_frame_log_only);
+    RUN(ini_devtools_sets_autotest);
+    RUN(ini_strips_bench_key_from_base);
+    RUN(ini_without_base_fails_and_writes_nothing);
+    RUN(foreign_ini_backed_up_once);
+    RUN(user_ini_overrides);
+    RUN(profile_release_has_no_diag_no_trace);
+    RUN(profile_fps_on);
+    RUN(profile_logs_on);
+    RUN(profile_game_dir_in_windows_form);
+    RUN(profile_strips_launcher_owned_keys_from_base);
+    RUN(logs_clear_only_logs_dir);
+    return jk_test_report("test_config");
+}
