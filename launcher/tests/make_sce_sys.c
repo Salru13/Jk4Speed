@@ -18,6 +18,21 @@ int main(void)
     jk_background(&f);
     int rc = jk_png_write(JK_ROOT_DIR "/build/sce_sys/pic1.png", &f);
 
+    /* the GitHub banner (README): the skyline with the wordmark large in the
+     * middle and "PS4" under it; drawn on a copy, pic1/icon0 stay as they are */
+    {
+        JkFrame b = { calloc((size_t)JK_W * JK_H, 4), JK_W, JK_H, JK_W * 4 };
+        jk_background(&b);
+        int ww = jk_text_width(JK_FONT_HERO, "JK4SPEED"), lh = jk_font_line_height(JK_FONT_HERO);
+        int wy = 230;                                      /* in the empty sky, above the skyline */
+        jk_wordmark(&b, (JK_W - ww) / 2, wy, JK_FONT_HERO);
+        const char *sub = "P  S  4";
+        int sw = jk_text_width(JK_FONT_HEAD, sub);
+        jk_text(&b, JK_FONT_HEAD, (JK_W - sw) / 2, wy + lh + 40, sub, JK_RGB_CHALK);
+        rc |= jk_png_write(JK_ROOT_DIR "/build/sce_sys/banner.png", &b);
+        free(b.pixels);
+    }
+
     /* icon: a 512x512 window on the skyline with the wordmark in its middle */
     const int x0 = 1300, y0 = 260, size = 512;
     jk_fill_alpha(&f, x0, y0, size, size, JK_RGB_INK, 110);

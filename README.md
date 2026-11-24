@@ -1,4 +1,4 @@
-![JK4SPEED](launcher/assets/sce_sys/pic1.png)
+![JK4SPEED](launcher/assets/banner.png)
 
 # JK4SPEED
 
@@ -56,11 +56,11 @@ JK4SPEED looks like the Xbox 360 version of Most Wanted because of community mod
 include them.** Download each one from its author, the same way you bring the game. Please download from
 these pages so the authors get the credit and the visits.
 
-| Mod | Author | Official page | Archive file name | Size | SHA-256 |
-|---|---|---|---|---|---|
-| **Xbox 360 Stuff Pack v4.2 (required)** | elaymm4 and many others (see [CREDITS.md](CREDITS.md)) | https://nfsmods.xyz/mod/1200 | On the Google Drive page, download the **whole "Complex Installation" folder**. Google Drive zips it into one or more files such as `Complex Installation-20261124T090016Z-1-001.zip`. Put **all** parts in. | about 940 MB in total | no whole-archive hash: JK4SPEED checks every file it uses inside the pack by its own SHA-256 |
-| NFSMW: Upscaled HUD (optional) | LunicAura106 | https://nfsmods.xyz/mod/1096 | **only** `NFSMWUHUD01022026b.7z` (2 January 2026). Older versions such as `NFSMWUHUD11302024a.7z` are not used. | 173,689,282 bytes | `61d793dea108eafff9a57484e86b2e2c6d6a888a537f9de8fac19c436f189660` |
-| NFSMW HD Road Textures (optional) | N4SRazer | https://www.nfsaddons.com/downloads/nfsmw/tools/5410/nfsmw-hd-road-textures.html | the ZIP from that page (any file name) | 1,682,999 bytes | `7857e85120564227fe90ec0667cc9414c90136e1937431fe59bd321e0bbce4e9` |
+| Mod | Author | Official page | Archive file name | SHA-256 |
+|---|---|---|---|---|
+| **Xbox 360 Stuff Pack v4.2 (required)** | elaymm4 and many others (see [CREDITS.md](CREDITS.md)) | https://nfsmods.xyz/mod/1200 | On the Google Drive page, download the **whole "Complex Installation" folder**. Google Drive zips it into one or more files such as `Complex Installation-20261124T090016Z-1-001.zip`. Put **all** parts in. | no whole-archive hash: JK4SPEED checks every file it uses inside the pack by its own SHA-256 |
+| NFSMW: Upscaled HUD (optional) | LunicAura106 | https://nfsmods.xyz/mod/1096 | **only** `NFSMWUHUD01022026b.7z` (2 January 2026). Older versions such as `NFSMWUHUD11302024a.7z` are not used. | `61d793dea108eafff9a57484e86b2e2c6d6a888a537f9de8fac19c436f189660` |
+| NFSMW HD Road Textures (optional) | N4SRazer | https://www.nfsaddons.com/downloads/nfsmw/tools/5410/nfsmw-hd-road-textures.html | the ZIP from that page (any file name) | `7857e85120564227fe90ec0667cc9414c90136e1937431fe59bd321e0bbce4e9` |
 
 ### Step by step
 
