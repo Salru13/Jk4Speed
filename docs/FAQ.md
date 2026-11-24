@@ -36,6 +36,10 @@ Then press **Patch**. The pack is always on; turn the HUD and the roads on or of
 
 Turning a mod off puts your original game files back: Patch keeps an unchanged copy of every game file a mod replaces, so it never needs the download for that. A mod that is on but whose download is gone stays installed as it is.
 
+## Patch seems stuck at 0
+
+The first PATCH takes **about 5 minutes**. The progress bar can stay at 0 for several minutes while JK4SPEED saves your original files, reads the mod zips and builds the mod files; the text above the bar shows what it is doing. This is normal: do not close JK4SPEED or turn off the PS4.
+
 ## Archive damaged or not found
 
 Download it again from the author's page and put it back, still zipped, in `/data/Jk4Speed/Mods` or `USB:/Jk4Speed`.

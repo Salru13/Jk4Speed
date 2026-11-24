@@ -22,7 +22,7 @@ JK4SPEED runs your own copy of Need for Speed Most Wanted (PC, v1.3 Black Editio
 3. **Copy your game** (PC v1.3 Black Edition, untouched) into `/data/Jk4Speed/NFSMW`, over FTP or from a USB drive.
    `speed.exe` must be directly in `NFSMW`.
 4. **Copy the mod downloads, still zipped,** into `/data/Jk4Speed/Mods` (over FTP: file names without spaces).
-5. **Open JK4SPEED, press PATCH, then PLAY.** The first PATCH takes a few minutes.
+5. **Open JK4SPEED, press PATCH, then PLAY.** The first PATCH takes **about 5 minutes**. The progress bar can stay at 0 for several minutes while JK4SPEED saves your original files, reads the mod zips and builds the mod files; the text above the bar shows what it is doing. This is normal: do not close JK4SPEED or turn off the PS4.
 
 ## Before you start
 
@@ -39,7 +39,7 @@ JK4SPEED runs your own copy of Need for Speed Most Wanted (PC, v1.3 Black Editio
 3. **Copy your game** (PC v1.3 Black Edition, untouched) into `/data/Jk4Speed/NFSMW`, over FTP or from a USB drive.
    `speed.exe` must be directly in `NFSMW`.
 4. **Copy the mod downloads, still zipped,** into `/data/Jk4Speed/Mods` (over FTP: file names without spaces).
-5. **Open JK4SPEED, press PATCH, then PLAY.** The first PATCH takes a few minutes.
+5. **Open JK4SPEED, press PATCH, then PLAY.** The first PATCH takes **about 5 minutes**. The progress bar can stay at 0 for several minutes while JK4SPEED saves your original files, reads the mod zips and builds the mod files; the text above the bar shows what it is doing. This is normal: do not close JK4SPEED or turn off the PS4.
 
 ## Patch
 
