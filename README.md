@@ -38,7 +38,7 @@ JK4SPEED is a PS4 app with its own launcher, the Wine runtime for the console fr
 | Mods | The **Xbox 360 Stuff Pack (required)** and, if you like, the Upscaled HUD and HD Road Textures, downloaded from their authors' pages (below). |
 | USB drive | To bring the mods and your PC saves to the console (FTP to `/data/Jk4Speed/` works too). |
 
-We do not ship, sell or link to copies of the game. Please do not ask for them.
+Use only a copy of Most Wanted you own. JK4SPEED does not include the game.
 
 ## Download
 
