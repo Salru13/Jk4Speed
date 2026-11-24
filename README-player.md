@@ -2,6 +2,23 @@
 
 JK4SPEED runs your own copy of Need for Speed Most Wanted (PC, v1.3 Black Edition) on a PS4. It is an unofficial fan project. The game is not included: you need your own copy. Official page: github.com/Salru13/Jk4Speed
 
+## Where everything goes
+
+```
+/data/Jk4Speed/                          <- made by JK4SPEED at its first start (capital J and S)
+├── NFSMW/                               <- your game: PC v1.3 Black Edition
+│   ├── speed.exe                        <- directly in NFSMW, not in a folder inside it
+│   └── (all the other game files and folders)
+└── Mods/                                <- the mod downloads, STILL ZIPPED (do not unpack)
+    ├── Complex_Installation-...-001.zip <- Xbox 360 Stuff Pack (required), every part
+    ├── NFSMWUHUD01022026b.7z            <- Upscaled HUD (optional)
+    └── nfsmw-hd-road-textures.zip       <- HD Road Textures (optional)
+```
+
+1. Install the PKG and open JK4SPEED once: it makes `/data/Jk4Speed/` and its folders.
+2. Copy your game folder into `/data/Jk4Speed/NFSMW` and the mod zips into `/data/Jk4Speed/Mods` (FTP: file names without spaces).
+3. In JK4SPEED press **PATCH**, then **PLAY**.
+
 ## Before you start
 
 - A PS4 with GoldHEN (the homebrew enabler) running.
