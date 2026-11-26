@@ -25,6 +25,7 @@ static const struct {
     [JK_CB_L1] = { "ButtonLB", "l1", "L1", "l1", 0x400u, "Button(11)" },
     [JK_CB_R3] = { "ButtonRS", "r3", "R3", "r3", 0x4u, "Null" },
     [JK_CB_L3] = { "ButtonLS", "l3", "L3", "l3", 0x2u, "Null" },
+    [JK_CB_TOUCHPAD] = { NULL, "touchpad", "Touchpad", "touchpad", 0x100000u, NULL },   /* no Xidi element */
 };
 
 /* per function: the game's DirectInput button, or a keyboard key */
@@ -39,6 +40,7 @@ static const struct { const char *name, *id; int game; const char *key; JkCtlBut
     [JK_ACT_SHIFT_DOWN] = { "Shift down", "shift_down", 0, "ctrl", JK_CB_L1 },
     [JK_ACT_CAMERA] = { "Change camera", "camera", 0, "c", JK_CB_R3 },
     [JK_ACT_RESET] = { "Reset car", "reset", 6, NULL, JK_CB_L3 },
+    [JK_ACT_CHALLENGE] = { "Challenge rival", "challenge", 0, "2", JK_CB_TOUCHPAD },
 };
 
 void jk_controls_default(JkControls *c)
@@ -52,12 +54,14 @@ int jk_controls_is_default(const JkControls *c)
     return 1;
 }
 
-void jk_controls_assign(JkControls *c, JkCtlAction a, JkCtlButton b)
+int jk_controls_assign(JkControls *c, JkCtlAction a, JkCtlButton b)
 {
-    if (!c || a < 0 || a >= JK_ACT_N || b < 0 || b >= JK_CB_N) return;
+    if (!c || a < 0 || a >= JK_ACT_N || b < 0 || b >= JK_CB_N) return -1;
+    if (!B[b].xidi && A[a].game) return -1;                          /* a game button needs Xidi */
     for (int o = 0; o < JK_ACT_N; o++)
         if (o != (int)a && c->btn[o] == b) c->btn[o] = JK_CB_NONE;   /* the old holder is left empty */
     c->btn[a] = (uint8_t)b;
+    return 0;
 }
 
 static int valid(const JkControls *c)
@@ -66,6 +70,7 @@ static int valid(const JkControls *c)
     for (int a = 0; a < JK_ACT_N; a++) {
         if (c->btn[a] == JK_CB_NONE) continue;
         if (c->btn[a] >= JK_CB_N || seen[c->btn[a]]++) return 0;
+        if (!B[c->btn[a]].xidi && A[a].game) return 0;              /* game button on the touchpad */
     }
     return 1;
 }
@@ -80,7 +85,7 @@ int jk_controls_load(const char *state_dir, JkControls *out)
     if (!t) return 0;
     JkControls c;
     int got = 0;
-    jk_controls_default(&c);
+    jk_controls_default(&c);                                         /* a missing line keeps its default */
     for (char *line = strtok(t, "\n"); line; line = strtok(NULL, "\n")) {
         char fn[32], bn[32];
         if (sscanf(line, "%31s %31s", fn, bn) != 2) continue;
@@ -93,7 +98,7 @@ int jk_controls_load(const char *state_dir, JkControls *out)
         got |= 1 << a;
     }
     free(t);
-    if (got == (1 << JK_ACT_N) - 1 && valid(&c)) *out = c;
+    if (got && valid(&c)) *out = c;
     return 0;
 }
 
@@ -120,6 +125,7 @@ int jk_controls_xidi_lines(const JkControls *c, char *out, size_t cap)
 {
     size_t n = 0;
     for (int b = 0; b < JK_CB_N; b++) {
+        if (!B[b].xidi) continue;                                    /* touchpad: keys only */
         int a = holder(c, b);
         char v[16];
         if (a >= 0 && A[a].game) snprintf(v, sizeof v, "Button(%d)", A[a].game);
@@ -134,7 +140,7 @@ int jk_controls_xidi_lines(const JkControls *c, char *out, size_t cap)
 int jk_controls_input_lines(const JkControls *c, char *out, size_t cap)
 {
     static const JkCtlButton order[JK_CB_N] = { JK_CB_L1, JK_CB_R1, JK_CB_R3, JK_CB_L3, JK_CB_R2, JK_CB_L2,
-                                                JK_CB_CROSS, JK_CB_CIRCLE, JK_CB_SQUARE, JK_CB_TRIANGLE };
+                                                JK_CB_CROSS, JK_CB_CIRCLE, JK_CB_SQUARE, JK_CB_TRIANGLE, JK_CB_TOUCHPAD };
     size_t n = 0;
     if (cap) out[0] = 0;
     for (int i = 0; i < JK_CB_N; i++) {

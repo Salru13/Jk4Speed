@@ -421,8 +421,8 @@ static void draw_controls(JkFrame *f, const JkModel *m)
     page_title(f, JK_S_CONTROLS);
     panel(f, 150, PANEL_Y, 1660, PANEL_H, m->ctl_listen ? JK_RGB_DUSK : JK_RGB_SMOKE);
     int lh = jk_font_line_height(JK_FONT_BODY);
-    /* the ten remappable functions: name, button (or "–" when empty) */
-    const int x = 194, rw = 860, step = 52, y0 = PANEL_Y + 30;
+    /* the eleven remappable functions: name, button (or NONE when empty) */
+    const int x = 194, rw = 860, step = 47, y0 = PANEL_Y + 30;
     for (int i = 0; i < JK_ACT_N; i++) {
         int y = y0 + i * step, focused = m->ctl_focus == i;
         int btn = m->controls.btn[i];

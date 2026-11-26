@@ -746,7 +746,8 @@ static void press_controls(JkApp *a, uint32_t b)
         if (b == JK_PAD_OPTIONS) { m->ctl_listen = 0; return; }
         int btn = jk_controls_button_from_pad(b);
         if (btn < 0) return;                                    /* D-pad, sticks: keep listening */
-        jk_controls_assign(&m->controls, (JkCtlAction)m->ctl_focus, (JkCtlButton)btn);
+        if (jk_controls_assign(&m->controls, (JkCtlAction)m->ctl_focus, (JkCtlButton)btn) < 0)
+            return;                                             /* touchpad for a game button: keep listening */
         m->ctl_listen = 0;
         controls_save(a);
         return;
@@ -860,7 +861,7 @@ static uint32_t pick(uint32_t pressed)
     static const uint32_t order[] = { JK_PAD_CIRCLE, JK_PAD_CROSS, JK_PAD_TRIANGLE, JK_PAD_SQUARE,
                                       JK_PAD_UP, JK_PAD_DOWN, JK_PAD_LEFT, JK_PAD_RIGHT,
                                       /* CONTROLS capture; other screens ignore them */
-                                      JK_PAD_R2, JK_PAD_L2, JK_PAD_R1, JK_PAD_L1, JK_PAD_R3, JK_PAD_L3, JK_PAD_OPTIONS };
+                                      JK_PAD_R2, JK_PAD_L2, JK_PAD_R1, JK_PAD_L1, JK_PAD_R3, JK_PAD_L3, JK_PAD_OPTIONS, JK_PAD_TOUCHPAD };
     for (size_t i = 0; i < sizeof order / sizeof order[0]; i++)
         if (pressed & order[i]) return order[i];
     return 0;

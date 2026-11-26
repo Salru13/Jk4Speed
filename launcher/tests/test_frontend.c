@@ -326,6 +326,9 @@ static void controls_capture_and_reset(void)
     press(JK_PAD_CROSS);
     press(JK_PAD_UP);                                      /* D-pad is not a remappable button: still listening */
     CHECK(app.m.ctl_listen);
+    press(JK_PAD_TOUCHPAD);                                /* touchpad carries keys only: brake refused, still listening */
+    CHECK(app.m.ctl_listen);
+    CHECK_EQ(app.m.controls.btn[JK_ACT_CHALLENGE], JK_CB_TOUCHPAD);
     press(JK_PAD_OPTIONS);                                 /* cancel */
     CHECK(!app.m.ctl_listen);
     CHECK_EQ(app.m.controls.btn[JK_ACT_BRAKE], JK_CB_L2);
@@ -335,6 +338,12 @@ static void controls_capture_and_reset(void)
     CHECK(jk_controls_is_default(&saved));
     press(JK_PAD_CIRCLE);
     CHECK_EQ(app.m.screen, JK_SCR_SETTINGS);
+    press(JK_PAD_CROSS);                                   /* back in: challenge rival on R3 */
+    while (app.m.ctl_focus != JK_ACT_CHALLENGE) press(JK_PAD_DOWN);
+    press(JK_PAD_CROSS);
+    press(JK_PAD_R3);
+    CHECK_EQ(app.m.controls.btn[JK_ACT_CHALLENGE], JK_CB_R3);
+    CHECK_EQ(app.m.controls.btn[JK_ACT_CAMERA], JK_CB_NONE);
     tmp_rm_rf(e.root);
 }
 

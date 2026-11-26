@@ -81,7 +81,8 @@ Turn each one on or off in **Settings > Mods**, then press **Patch**. Any mix of
 ## Controls
 
 Default layout: R2 gas, L2 brake / reverse, R1 shift up, L1 shift down, Square nitrous, Triangle speedbreaker,
-Cross handbrake / accept, Circle brake / back, R3 change camera, L3 reset car, Options pause, right stick back look behind.
+Cross handbrake / accept, Circle brake / back, R3 change camera, L3 reset car, touchpad click challenge a rival (the game's key 2), Options pause,
+right stick back look behind. The touchpad can hold only keyboard functions (shift, camera, challenge).
 
 To change it: **Settings > Controls**, pick a function, press the cross button, then press the new button (it is taken
 at once). A function whose button you take is left as **NONE**: give it a new one. Triangle puts the default layout back.

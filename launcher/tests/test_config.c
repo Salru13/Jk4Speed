@@ -192,7 +192,7 @@ static void controls_compose_profile_and_xidi(void)
     CHECK_EQ(jk_config_write_profile(&in, why, sizeof why), 0);
     snprintf(path, sizeof path, "%s/nfsmw.profile", in.profiles_dir);
     FILE *f = fopen(path, "rb"); size_t n = f ? fread(buf, 1, sizeof buf - 1, f) : 0; if (f) fclose(f); buf[n] = 0;
-    CHECK(strstr(buf, "[input]\nmode = xinput\nl1 = ctrl\nr1 = shift\nr3 = c\n") != NULL);
+    CHECK(strstr(buf, "[input]\nmode = xinput\nl1 = ctrl\nr1 = shift\nr3 = c\ntouchpad = 2\n") != NULL);
     CHECK_EQ(jk_config_write_xidi(&in, why, sizeof why), 0);
     snprintf(path, sizeof path, "%s/Xidi.ini", in.game_dir);
     char sha[65];

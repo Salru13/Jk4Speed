@@ -152,6 +152,7 @@ default layout back. One button per function (no combinations). Options (pause),
 | R3 | Change camera view |
 | Right stick pulled back | Look behind (hold) |
 | L3 | Reset car |
+| Touchpad (click) | Challenge a rival (the game's keyboard key 2) |
 | Options | Pause |
 | Left stick | Steering |
 | D-pad | Menu navigation |

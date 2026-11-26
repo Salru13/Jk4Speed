@@ -10,7 +10,9 @@
  * Saved as <state_dir>/controls.txt ("<function> <button>" lines). The game
  * gets it through Xidi.ini (the CustomMapper lines: a button -> the
  * DirectInput Button(n) the game reads) and the runtime profile's [input]
- * keyboard binds (Shift up = shift, Shift down = ctrl, Camera = c).
+ * keyboard binds (Shift up = shift, Shift down = ctrl, Camera = c,
+ * Challenge rival = 2 on the touchpad). A controls.txt without a line for a
+ * function (1.00 had no challenge) keeps that function's default.
  */
 #ifndef JK_CONTROLS_H
 #define JK_CONTROLS_H
@@ -20,12 +22,15 @@
 
 typedef enum JkCtlAction {
     JK_ACT_GAS = 0, JK_ACT_BRAKE, JK_ACT_HANDBRAKE, JK_ACT_BACK, JK_ACT_NITRO, JK_ACT_SPEEDBREAKER,
-    JK_ACT_SHIFT_UP, JK_ACT_SHIFT_DOWN, JK_ACT_CAMERA, JK_ACT_RESET, JK_ACT_N
+    JK_ACT_SHIFT_UP, JK_ACT_SHIFT_DOWN, JK_ACT_CAMERA, JK_ACT_RESET,
+    JK_ACT_CHALLENGE,                 /* keyboard "2": challenge a rival (no pad button in the game) */
+    JK_ACT_N
 } JkCtlAction;
 
+/* The touchpad has no Xidi element: it carries keyboard functions only. */
 typedef enum JkCtlButton {
     JK_CB_R2 = 0, JK_CB_L2, JK_CB_CROSS, JK_CB_CIRCLE, JK_CB_SQUARE, JK_CB_TRIANGLE,
-    JK_CB_R1, JK_CB_L1, JK_CB_R3, JK_CB_L3, JK_CB_N,
+    JK_CB_R1, JK_CB_L1, JK_CB_R3, JK_CB_L3, JK_CB_TOUCHPAD, JK_CB_N,
     JK_CB_NONE = 0xFF                 /* a function with no button */
 } JkCtlButton;
 
@@ -33,8 +38,9 @@ typedef struct JkControls { uint8_t btn[JK_ACT_N]; } JkControls;   /* function -
 
 void jk_controls_default(JkControls *c);
 int jk_controls_is_default(const JkControls *c);
-/* Function a gets button b; a function that held b is left with JK_CB_NONE. */
-void jk_controls_assign(JkControls *c, JkCtlAction a, JkCtlButton b);
+/* Function a gets button b; a function that held b is left with JK_CB_NONE.
+ * -1 (nothing changed) for bad args or a game-button function on the touchpad. */
+int jk_controls_assign(JkControls *c, JkCtlAction a, JkCtlButton b);
 
 /* <state_dir>/controls.txt. A missing or damaged file (not one button per
  * function, "none" allowed) gives the defaults. 0 ok (defaults included), -1 bad args. */

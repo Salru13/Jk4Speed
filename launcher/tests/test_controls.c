@@ -22,7 +22,50 @@ static void defaults_are_the_owner_layout(void)
     CHECK_EQ(c.btn[JK_ACT_SHIFT_DOWN], JK_CB_L1);
     CHECK_EQ(c.btn[JK_ACT_CAMERA], JK_CB_R3);
     CHECK_EQ(c.btn[JK_ACT_RESET], JK_CB_L3);
+    CHECK_EQ(c.btn[JK_ACT_CHALLENGE], JK_CB_TOUCHPAD);         /* keyboard "2": challenge a rival */
     CHECK(jk_controls_is_default(&c));
+}
+
+/* Challenge rival = keyboard key 2 (the game has no pad button for it). The
+ * touchpad has no Xidi element: it carries only keyboard functions. */
+static void challenge_is_key_two_on_touchpad(void)
+{
+    JkControls c;
+    jk_controls_default(&c);
+    char x[1024], in[256];
+    CHECK(jk_controls_input_lines(&c, in, sizeof in) > 0);
+    CHECK(strstr(in, "touchpad = 2\n") != NULL);
+    CHECK(jk_controls_xidi_lines(&c, x, sizeof x) > 0);
+    CHECK(!strstr(x, "touchpad") && !strstr(x, "(null)"));
+    CHECK_EQ(jk_controls_assign(&c, JK_ACT_GAS, JK_CB_TOUCHPAD), -1);   /* a game button: refused */
+    CHECK_EQ(c.btn[JK_ACT_GAS], JK_CB_R2);
+    CHECK_EQ(c.btn[JK_ACT_CHALLENGE], JK_CB_TOUCHPAD);
+    CHECK_EQ(jk_controls_assign(&c, JK_ACT_CAMERA, JK_CB_TOUCHPAD), 0);  /* a key function: taken */
+    CHECK_EQ(c.btn[JK_ACT_CHALLENGE], JK_CB_NONE);
+    CHECK_EQ(jk_controls_assign(&c, JK_ACT_CHALLENGE, JK_CB_SQUARE), 0); /* key 2 on square: nitro empty */
+    CHECK_EQ(c.btn[JK_ACT_NITRO], JK_CB_NONE);
+    jk_controls_input_lines(&c, in, sizeof in);
+    jk_controls_xidi_lines(&c, x, sizeof x);
+    CHECK(strstr(in, "square = 2\n") && strstr(in, "touchpad = c\n"));
+    CHECK(strstr(x, "ButtonX = Null\n") != NULL);
+    CHECK_EQ(jk_controls_button_from_pad(0x100000u), JK_CB_TOUCHPAD);
+    CHECK(!strcmp(jk_controls_button_name(JK_CB_TOUCHPAD), "Touchpad"));
+}
+
+/* A 1.00 controls.txt has no "challenge" line: the player's layout is kept
+ * and challenge gets its default (the touchpad, which 1.00 could not use). */
+static void old_file_without_challenge_keeps_layout(void)
+{
+    char d[256];
+    tmp_dir(d, sizeof d);
+    tmp_put(d, "controls.txt", "gas cross\nbrake l2\nhandbrake none\nback circle\nnitro square\n"
+                               "speedbreaker triangle\nshift_up r1\nshift_down l1\ncamera r3\nreset l3\n");
+    JkControls r;
+    CHECK_EQ(jk_controls_load(d, &r), 0);
+    CHECK_EQ(r.btn[JK_ACT_GAS], JK_CB_CROSS);
+    CHECK_EQ(r.btn[JK_ACT_HANDBRAKE], JK_CB_NONE);
+    CHECK_EQ(r.btn[JK_ACT_CHALLENGE], JK_CB_TOUCHPAD);
+    tmp_rm_rf(d);
 }
 
 /* the default must write exactly today's mapping (Xidi.ini 3c03a044, profile [input]) */
@@ -38,7 +81,7 @@ static void default_output_equals_release_files(void)
     CHECK(strstr(x, "ButtonRS = Null\n") && strstr(x, "ButtonLS = Button(6)\n"));
     CHECK(strstr(x, "ButtonLB = Button(11)\n") && strstr(x, "ButtonRB = Button(12)\n"));
     CHECK(jk_controls_input_lines(&c, in, sizeof in) > 0);
-    CHECK(!strcmp(in, "l1 = ctrl\nr1 = shift\nr3 = c\n"));
+    CHECK(!strcmp(in, "l1 = ctrl\nr1 = shift\nr3 = c\ntouchpad = 2\n"));
 }
 
 static void assign_leaves_the_old_owner_empty(void)
@@ -99,5 +142,7 @@ int main(void)
     RUN(assign_leaves_the_old_owner_empty);
     RUN(save_load_roundtrip_and_bad_file);
     RUN(button_from_pad_and_names);
+    RUN(challenge_is_key_two_on_touchpad);
+    RUN(old_file_without_challenge_keeps_layout);
     return jk_test_report("test_controls");
 }
