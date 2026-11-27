@@ -1,22 +1,48 @@
 # JK4SPEED FAQ
 
+## Which side should I pick?
+
+- **Left, MOST WANTED · BLACK EDITION:** the Xbox 360 look (colours, lighting and effects of the Xbox 360 version, optional HD HUD and HD roads). Needs PC v1.3 Black Edition and the Xbox 360 Stuff Pack download.
+- **Right, MOST WANTED · ORIGINAL:** the game as it looks on PC (its own yellow-tinted colours, roads and shadows), in 16:9 widescreen and 1080p. Works with the Black Edition or the regular edition, and needs no mod downloads.
+
+You can set up both and switch on the Home screen with left / right. PLAY, PATCH and SETTINGS act on the side you picked.
+
 ## Where does my game go?
 
-Copy the whole game folder of Most Wanted PC v1.3 Black Edition into `/data/Jk4Speed/NFSMW`, over FTP or with a USB drive. `speed.exe` must be directly in this folder, not in a folder inside it. Upper or lower case of `NFSMW` does not matter. Then open Patch and press the cross button to install. Only use a copy of Most Wanted you own.
+- **Left side:** copy the whole game folder of Most Wanted PC v1.3 Black Edition into `/data/Jk4Speed/NFSMW`.
+- **Right side:** copy the whole game folder of your PC Most Wanted (Black Edition or regular edition) into `/data/Jk4Speed/NFS`.
 
-Folder names on the PS4 are case-sensitive: use exactly `/data/Jk4Speed` (capital J and S). `/data/Jk4speed` or `/data/jk4speed` is a different folder that JK4SPEED does not read. The easiest way: open JK4SPEED once first; it makes `/data/Jk4Speed/` with `Mods`, `Saves` and `Logs` for you. Only the game folder `NFSMW` may be written in any case (`nfsmw` works too), and the mod zip names can be anything.
+Use FTP or a USB drive. `speed.exe` must be directly in that folder, not in a folder inside it. Upper or lower case of `NFSMW` / `NFS` does not matter. Then pick the side on the Home screen, open Patch and press the cross button to install. Only use a copy of Most Wanted you own.
+
+Folder names on the PS4 are case-sensitive: use exactly `/data/Jk4Speed` (capital J and S). `/data/Jk4speed` or `/data/jk4speed` is a different folder that JK4SPEED does not read. The easiest way: open JK4SPEED once first; it makes `/data/Jk4Speed/` with `Mods`, `Saves`, `Saves-NFS` and `Logs` for you. Only the game folders `NFSMW` and `NFS` may be written in any case, and the mod zip names can be anything.
+
+## What does the right side add to my game?
+
+Only JK4SPEED's runtime files and ThirteenAG's Widescreen Fix (included in the package, GPL-3.0): a 16:9 picture, HUD and movies placed for 16:9, and 1920x1080 from the first start. It changes no colours, roads or shadows, and no controls. With the v1.3 `speed.exe` the 30/60 frame pacer is on; with any other one the version row says "Unknown speed.exe: runs without the 30/60 pacer and fixes" and the game still starts. A disc copy still protected by SafeDisc does not start on the console.
+
+## Can I put the same game in both folders?
+
+Yes. Copy it twice, once into `NFSMW` and once into `NFS`. Each side installs its own files in its own folder and keeps its own settings and saves (`Saves` and `Saves-NFS`), so the two never get in each other's way.
+
+## My PC copy already has mods or fixes in it (right side)
+
+PATCH on the right side moves aside the fixes that would change the game beyond the widescreen picture (an older Widescreen Fix, Fusion Fix, Extra Options) and backs them up; **Restore** (triangle on the Patch screen) puts all of them back. For the cleanest result copy an install without mods.
+
+## Why does the original look more yellow and brighter than the Black Edition side?
+
+That is the original PC look: Most Wanted's own colour filter (Visual Treatment and Overbright) gives its well-known golden tint and bright roads in the sun. JK4SPEED does not change colours on the right side (no colour filter, no gamma, no shadow tweaks). The left side looks different because the Xbox 360 Stuff Pack replaces the game's shaders with the Xbox 360 ones.
 
 ## Game not found
 
-The folder must be `/data/Jk4Speed/NFSMW`, with `speed.exe` directly in it.
+The folder must be `/data/Jk4Speed/NFSMW` (left side) or `/data/Jk4Speed/NFS` (right side), with `speed.exe` directly in it.
 
 ## Two game folders
 
-The console sees `NFSMW` and `nfsmw` as two folders. Keep only one, then start Jk4Speed again. Jk4Speed does not guess which one is yours, and it changes nothing until there is only one.
+The console sees `NFSMW` and `nfsmw` (or `NFS` and `nfs`) as two folders. Keep only one, then start Jk4Speed again. Jk4Speed does not guess which one is yours, and it changes nothing until there is only one.
 
 ## Unsupported game version
 
-Only Most Wanted PC v1.3 Black Edition works. Copy the game folder of a v1.3 Black Edition install from your PC.
+On the **left side** only Most Wanted PC v1.3 Black Edition works: copy the game folder of a v1.3 Black Edition install from your PC. The **right side** takes any `speed.exe` (see above).
 
 ## 30 FPS or 60 FPS?
 
@@ -75,7 +101,7 @@ No. Settings you change before the first Patch are saved and used from the first
 
 ## Where are my saves?
 
-In `/data/Jk4Speed/Saves`, one folder per profile inside `NFS Most Wanted`. To bring a PC save: copy `Documents\NFS Most Wanted` to `USB:/Jk4Speed/saves/`, open Settings > Save games and press the square button Import. Your current saves are backed up first. To take them to a PC: Settings > Save games, cross button Export to USB; the copy goes to `USB:/Jk4Speed/saves/<date>/`. Saves from v1.3 Black Edition work. Saves made with other mods (extra cars, for example) may not load.
+Left side: `/data/Jk4Speed/Saves`; right side: `/data/Jk4Speed/Saves-NFS`; one folder per profile inside `NFS Most Wanted`. The two never mix. Everything below works on the side you picked. To bring a PC save: copy `Documents\NFS Most Wanted` to `USB:/Jk4Speed/saves/`, open Settings > Save games and press the square button Import. Your current saves are backed up first. To take them to a PC: Settings > Save games, cross button Export to USB; the copy goes to `USB:/Jk4Speed/saves/<date>/`. Saves from v1.3 Black Edition work. Saves made with other mods (extra cars, for example) may not load.
 
 ## What is Settings > Show FPS / ms?
 
@@ -90,6 +116,10 @@ It shows the frames per second and the frame time in ms in the top right corner 
 ## The game didn't start
 
 In Settings > Logs & Support turn on Enable logs, play again, then save a support bundle.
+
+## The game stopped before its first picture after I turned on Enable logs (1.00 / 1.01)
+
+Fixed in 1.10. In 1.00 and 1.01, Enable logs made the game's runtime settings one line too long, so the game never started while logs were on. Update to 1.10, or turn Enable logs off in 1.00 / 1.01.
 
 ## Official build or unofficial build?
 

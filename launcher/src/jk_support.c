@@ -234,7 +234,8 @@ int jk_support_bundle(const JkSupportIn *in, char *out_dir, size_t cap, int *usb
     }
     man_add(&man, "This folder holds logs only: no saves, no registry files, no game data.\n\nfiles:\n", NULL, NULL, NULL);
 
-    char p[1024];
+    char p[1024], prof_name[96];
+    snprintf(prof_name, sizeof prof_name, "%s.profile", in->profile_key && in->profile_key[0] ? in->profile_key : "nfsmw");
     if (jk_fs_join(p, sizeof p, in->data_root, "state/launcher.log") == 0) add_file(&man, bundle, p, in->local_user, "launcher");
     add_sessions(&man, bundle, in->logs_dir, in->local_user);
     if (in->log_files) {
@@ -248,7 +249,7 @@ int jk_support_bundle(const JkSupportIn *in, char *out_dir, size_t cap, int *usb
         for (size_t i = 0; in->game_dir && i < sizeof GAME_LOGS / sizeof GAME_LOGS[0]; i++)
             if (jk_fs_join(p, sizeof p, in->game_dir, GAME_LOGS[i].name) == 0 && (!GAME_LOGS[i].optional || jk_fs_exists(p)))
                 add_file(&man, bundle, p, in->local_user, GAME_LOGS[i].label);
-        if (in->profiles_dir && jk_fs_join(p, sizeof p, in->profiles_dir, "nfsmw.profile") == 0)   /* r4: the composed profile */
+        if (in->profiles_dir && jk_fs_join(p, sizeof p, in->profiles_dir, prof_name) == 0)   /* r4: the composed profile */
             add_file(&man, bundle, p, in->local_user, "runtime profile");
         if (jk_fs_join(p, sizeof p, in->runtime_root ? in->runtime_root : in->logs_dir, "radv.log") == 0)
             add_file(&man, bundle, p, in->local_user, "radv");

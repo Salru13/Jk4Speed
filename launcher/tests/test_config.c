@@ -339,10 +339,33 @@ static void profile_logs_on(void)
     CHECK_EQ(jk_config_write_profile(&in, why, sizeof why), 0);
     CHECK(read_profile(&in, buf, sizeof buf) > 0);
     CHECK(has_line(buf, "env = DXVK_PS4_LOG_DIR=/data/Jk4Speed/Logs"));
-    CHECK(has_line(buf, "env = DXVK_LOG_LEVEL=info"));
+    CHECK(strstr(buf, "DXVK_LOG_LEVEL") == NULL);                 /* info is DXVK's default: no line needed */
     CHECK(has_line(buf, "winedebug = +tid,err+all,+loaddll"));
     CHECK(strstr(buf, "DXVK_PS4_DIAG") == NULL);
     tmp_rm_rf(d);
+}
+
+/* The runtime refuses a profile with more than 5 [debug] env lines (pw_game_profile.c
+ * PW_GAME_DEBUG_ENV_MAX = 5: "profile refused ... status=malformed", the game never starts).
+ * 1.00/1.01 wrote 6 with logs on (console 2026-11-27). Every settings mix stays within 5. */
+static void profile_env_lines_within_runtime_limit(void)
+{
+    for (int mix = 0; mix < 8; mix++) {
+        char d[256], buf[8192];
+        tmp_dir(d, sizeof d);
+        JkConfigIn in;
+        cfg_real(&in, d, BASE_DIR);
+        in.set.logs = mix & 1;
+        in.set.fps_hud = (mix >> 1) & 1;
+        in.set.pace = (mix >> 2) & 1 ? JK_PACE_60 : JK_PACE_30;
+        char why[200];
+        CHECK_EQ(jk_config_write_profile(&in, why, sizeof why), 0);
+        CHECK(read_profile(&in, buf, sizeof buf) > 0);
+        int n = 0;
+        for (const char *p = buf; (p = strstr(p, "\nenv = ")) != NULL; p++) n++;
+        CHECK(n >= 1 && n <= 5);
+        tmp_rm_rf(d);
+    }
 }
 
 static void profile_game_dir_in_windows_form(void)
@@ -379,6 +402,121 @@ static void profile_strips_launcher_owned_keys_from_base(void)
     CHECK(has_line(buf, "winedebug = -all"));
     CHECK(has_line(buf, "prefix = default"));
     CHECK(has_line(buf, "r3 = c"));
+    tmp_rm_rf(d);
+}
+
+static void profile_key_nfs(void)
+{
+    char d[256], files[300], buf[8192];
+    tmp_dir(d, sizeof d);
+    snprintf(files, sizeof files, "%s/files", d);
+    tmp_put(files, "nfsmw.profile.base",
+            "[application]\nid = nfsmw\nname = NFS Most Wanted\nexecutable = C:\\old.exe\nprefix = nfsmw\n[debug]\nwinedebug = +all\n");
+    JkConfigIn in;
+    cfg_real(&in, d, files);
+    static char game[300];
+    snprintf(game, sizeof game, "/data/Jk4Speed/NFS");
+    in.game_dir = game;
+    in.profile_key = "nfs";
+    char why[200];
+    CHECK_EQ(jk_config_write_profile(&in, why, sizeof why), 0);
+    CHECK(!tmp_exists(in.profiles_dir, "nfsmw.profile"));
+    CHECK(read_into(in.profiles_dir, "nfs.profile", buf, sizeof buf) > 0);
+    CHECK(has_line(buf, "id = nfs"));
+    CHECK(!has_line(buf, "id = nfsmw"));
+    CHECK(has_line(buf, "executable = Z:\\data\\Jk4Speed\\NFS\\speed.exe"));
+    in.profile_key = NULL;                              /* the default key is unchanged */
+    CHECK_EQ(jk_config_write_profile(&in, why, sizeof why), 0);
+    CHECK(read_into(in.profiles_dir, "nfsmw.profile", buf, sizeof buf) > 0);
+    CHECK(has_line(buf, "id = nfsmw"));
+    tmp_rm_rf(d);
+}
+
+/* Every occurrence of from in buf becomes to (buf is big enough). */
+static void repl(char *buf, size_t cap, const char *from, const char *to)
+{
+    char *out = malloc(cap);
+    size_t n = 0, fl = strlen(from);
+    for (const char *p = buf; *p && n + 1 < cap;) {
+        if (!strncmp(p, from, fl)) { n += (size_t)snprintf(out + n, cap - n, "%s", to); p += fl; }
+        else out[n++] = *p++;
+    }
+    out[n] = 0;
+    snprintf(buf, cap, "%s", out);
+    free(out);
+}
+
+/* 1.1 (owner): the NFS slot gets every FPS and stability setting exactly as the NFSMW slot. Composed
+ * with the same settings and controls, the ini, the profile and Xidi.ini differ only in the game's
+ * name, folder and cache paths. */
+static void slots_compose_equivalent(void)
+{
+    char d[256], files[300];
+    tmp_dir(d, sizeof d);
+    snprintf(files, sizeof files, "%s/files", d);
+    mkdir(files, 0755);
+    static const char *const names[] = { "jk4speed.ini.base", "nfsmw.profile.base", "Xidi.ini" };
+    for (int i = 0; i < 3; i++) {
+        char src[400], dst[400];
+        snprintf(src, sizeof src, BASE_DIR "/%s", names[i]);
+        snprintf(dst, sizeof dst, "%s/%s", files, names[i]);
+        CHECK_EQ(jk_fs_copy_checked(src, dst, NULL), 0);
+    }
+    char prof[300], be[300], nfs[300], becache[300], nfscache[300], logs[300];
+    snprintf(prof, sizeof prof, "%s/profiles", d);
+    snprintf(be, sizeof be, "%s/Jk4Speed/NFSMW", d);
+    snprintf(nfs, sizeof nfs, "%s/Jk4Speed/NFS", d);
+    snprintf(becache, sizeof becache, "%s/Jk4Speed/System/cache", d);
+    snprintf(nfscache, sizeof nfscache, "%s/Jk4Speed/System/nfs/cache", d);
+    snprintf(logs, sizeof logs, "%s/Jk4Speed/Logs", d);
+    jk_fs_mkdir_p(be); jk_fs_mkdir_p(nfs); jk_fs_mkdir_p(prof);
+    JkControls ctl[2];
+    jk_controls_default(&ctl[0]);
+    jk_controls_default(&ctl[1]);
+    jk_controls_assign(&ctl[1], JK_ACT_CHALLENGE, JK_CB_TOUCHPAD);
+    jk_controls_assign(&ctl[1], JK_ACT_SHIFT_UP, JK_CB_SQUARE);
+    int combos = 0;
+    for (int c = 0; c < 2; c++)
+    for (int pace = 0; pace < 2; pace++)
+    for (int hud = 0; hud < 2; hud++)
+    for (int lg = 0; lg < 2; lg++) {
+        JkConfigIn a, b;
+        memset(&a, 0, sizeof a);
+        a.files_dir = files; a.profiles_dir = prof; a.logs_dir = logs;
+        a.set = (JkSettings){ pace ? JK_PACE_60 : JK_PACE_30, hud, lg };
+        a.controls = &ctl[c];
+        b = a;
+        a.game_dir = be; a.cache_dir = becache; a.profile_key = "nfsmw";
+        b.game_dir = nfs; b.cache_dir = nfscache; b.profile_key = "nfs";
+        char why[200];
+        CHECK_EQ(jk_config_write_ini(&a, why, sizeof why), 0);
+        CHECK_EQ(jk_config_write_ini(&b, why, sizeof why), 0);
+        CHECK_EQ(jk_config_write_profile(&a, why, sizeof why), 0);
+        CHECK_EQ(jk_config_write_profile(&b, why, sizeof why), 0);
+        CHECK_EQ(jk_config_write_xidi(&a, why, sizeof why), 0);
+        CHECK_EQ(jk_config_write_xidi(&b, why, sizeof why), 0);
+        static char ia[16384], ib[16384], pa[16384], pb[16384], xa[16384], xb[16384];
+        CHECK(read_into(be, "jk4speed-dev.ini", ia, sizeof ia) > 0 && read_into(nfs, "jk4speed-dev.ini", ib, sizeof ib) > 0);
+        CHECK(read_into(prof, "nfsmw.profile", pa, sizeof pa) > 0 && read_into(prof, "nfs.profile", pb, sizeof pb) > 0);
+        CHECK(read_into(be, "Xidi.ini", xa, sizeof xa) > 0 && read_into(nfs, "Xidi.ini", xb, sizeof xb) > 0);
+        repl(pb, sizeof pb, "id = nfs\n", "id = nfsmw\n");              /* only these slot-specific tokens */
+        repl(pb, sizeof pb, "Jk4Speed/NFS", "Jk4Speed/NFSMW");
+        repl(pb, sizeof pb, "Jk4Speed\\NFS", "Jk4Speed\\NFSMW");
+        repl(pb, sizeof pb, "System/nfs/cache", "System/cache");
+        repl(ib, sizeof ib, "Jk4Speed/NFS", "Jk4Speed/NFSMW");
+        repl(ib, sizeof ib, "Jk4Speed\\NFS", "Jk4Speed\\NFSMW");
+        CHECK(!strcmp(ia, ib));
+        CHECK(!strcmp(pa, pb));
+        CHECK(!strcmp(xa, xb));
+        /* the reference lines are there in both */
+        CHECK(strstr(pb, "env = PW_NATIVE_ALERT_UMTX=1\n") && strstr(pb, "env = DXVK_PS4_NATIVE_SERVER_CPU=38\n"));
+        CHECK(strstr(pb, "desktop = 1920x1080\n") && strstr(pb, "fast_clock = true\n") && strstr(pb, "cpu = native\n"));
+        CHECK(strstr(ib, pace ? "DXVK_PS4_NFS_PACE=60" : "DXVK_PS4_NFS_PACE=30") != NULL);
+        if (c == 0) CHECK(strstr(pb, "l1 = ctrl\n") && strstr(pb, "r1 = shift\n") && strstr(pb, "r3 = c\n") && strstr(pb, "touchpad = 2\n"));
+        else CHECK(strstr(pb, "square = shift\n") != NULL);
+        combos++;
+    }
+    CHECK_EQ(combos, 16);
     tmp_rm_rf(d);
 }
 
@@ -467,8 +605,11 @@ int main(void)
     RUN(profile_release_has_no_diag_no_trace);
     RUN(profile_fps_on);
     RUN(profile_logs_on);
+    RUN(profile_env_lines_within_runtime_limit);
     RUN(profile_game_dir_in_windows_form);
     RUN(profile_strips_launcher_owned_keys_from_base);
+    RUN(profile_key_nfs);
+    RUN(slots_compose_equivalent);
     RUN(logs_clear_only_logs_dir);
     return jk_test_report("test_config");
 }

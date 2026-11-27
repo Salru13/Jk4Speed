@@ -3,7 +3,7 @@
 # Copyright 2026 XxXJoker13XxX and contributors
 """Writes <app_root>/jk4speed-files/release.txt (src/jk_release.h format) over a
 staged package tree: eboot.bin, sce_sys/param.sfo and every file under
-jk4speed-files/ except release.txt/release.sig.
+jk4speed-files/ and jk4speed-files-nfs/ except release.txt/release.sig.
   python3 make_release.py APP_ROOT BUILD_ID [--eboot PATH]
 --eboot: hash eboot.bin from PATH (make_pkg.sh keeps it outside the stage)."""
 import hashlib, os, sys
@@ -22,7 +22,9 @@ def main():
     # param.sfo outside /app0, so only our own files are listed
     rels = []
     base = os.path.join(root, 'jk4speed-files')
-    for d, _, files in os.walk(base):
+    # 1.1: the original game's package folder is ours too (signed like the first)
+    walk = [w for b in (base, os.path.join(root, 'jk4speed-files-nfs')) for w in os.walk(b)]
+    for d, _, files in walk:
         for n in files:
             rel = os.path.relpath(os.path.join(d, n), root).replace(os.sep, '/')
             if rel in ('jk4speed-files/release.txt', 'jk4speed-files/release.sig'):

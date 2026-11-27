@@ -198,11 +198,23 @@ static void badge(JkFrame *f, const JkModel *m)
     jk_text(f, JK_FONT_HINT, x, y, main_text, official ? JK_RGB_CHALK : JK_RGB_SMOKE);
 }
 
+/* 1.1: the game this screen is about, under the badge (not on Home: its halves say it). */
+static void game_label(JkFrame *f, const JkModel *m)
+{
+    if (m->ngames < 2 || m->screen == JK_SCR_HOME || m->active < 0 || m->active > 1 || !m->slot_label[m->active]) return;
+    const char *t = m->slot_label[m->active];
+    int w = jk_text_width(JK_FONT_HINT, t);
+    int x = JK_BADGE_RIGHT - w, y = JK_BADGE_Y + 44;
+    jk_plate(f, x - 30, y + 10, 16, 16, JK_RGB_DUSK, 255);
+    jk_text(f, JK_FONT_HINT, x, y, t, JK_RGB_CHALK);
+}
+
 static void chrome(JkFrame *f, const JkModel *m)
 {
     jk_background(f);
     jk_wordmark(f, 120, 66, JK_FONT_HEAD);
     badge(f, m);
+    game_label(f, m);
 }
 
 /* ------------------------------------------------------------------ */
@@ -233,7 +245,7 @@ static int chips_of(const JkModel *m, Chip *out)
         break;
     default:
         out[n++] = (Chip){ JK_S_C_FOUND, JK_RGB_OK };
-        out[n++] = (Chip){ JK_S_C_V13, JK_RGB_OK };
+        out[n++] = m->exe_any && !c->exe_known ? (Chip){ JK_S_C_UNKNOWN_EXE, JK_RGB_DUSK } : (Chip){ JK_S_C_V13, JK_RGB_OK };
         out[n++] = c->state == JK_ST_READY ? (Chip){ JK_S_C_INSTALLED, JK_RGB_OK }
                  : c->state == JK_ST_UPDATE ? (Chip){ JK_S_C_UPDATE, JK_RGB_DUSK }
                  : c->state == JK_ST_CHANGED ? (Chip){ JK_S_C_CHANGED, JK_RGB_DUSK }
@@ -270,7 +282,7 @@ static const char *home_description(const JkModel *m)
         case JK_ST_NOT_INSTALLED: return JK_S_D_START_INSTALL;
         case JK_ST_UPDATE: return JK_S_D_START_UPDATE;
         case JK_ST_CHANGED: return JK_S_D_START_CHANGED;
-        case JK_ST_NO_GAME: return JK_S_D_START_NO_GAME;
+        case JK_ST_NO_GAME: return m->ngames >= 2 && m->active == 1 ? JK_S_D_START_NO_GAME_NFS : JK_S_D_START_NO_GAME;
         case JK_ST_WRONG_EXE: return JK_S_D_START_WRONG;
         case JK_ST_MISSING_FILES: return JK_S_D_START_MISSING;
         default: return JK_S_D_START_BAD;
@@ -307,8 +319,61 @@ static void menu_row(JkFrame *f, const JkModel *m, JkFont font, int x, int y, in
     }
 }
 
+static const char *half_status(JkState s, uint32_t *rgb)
+{
+    switch (s) {
+    case JK_ST_READY: *rgb = JK_RGB_OK; return JK_S_HS_READY;
+    case JK_ST_NO_GAME: *rgb = JK_RGB_SMOKE; return JK_S_H_COPY_HERE;
+    case JK_ST_WRONG_EXE: *rgb = JK_RGB_SIREN_RED; return JK_S_HS_WRONG;
+    case JK_ST_MISSING_FILES: *rgb = JK_RGB_SIREN_RED; return JK_S_HS_MISSING;
+    case JK_ST_BAD_PACKAGE: *rgb = JK_RGB_SIREN_RED; return JK_S_HS_BAD;
+    default: *rgb = JK_RGB_DUSK; return JK_S_HS_PATCH;
+    }
+}
+
+/* One game's half: its name, READY / PATCH NEEDED / COPY THE GAME HERE, its folder. The chosen
+ * half has the accent frame; a side without a game is dimmed (and can still be chosen). */
+static void home_half(JkFrame *f, const JkModel *m, int i)
+{
+    int x = JK_HALF_X0 + i * (JK_HALF_W + JK_HALF_GAP), y = JK_HALF_Y, w = JK_HALF_W, h = JK_HALF_H;
+    JkState s = m->slot_state[i];
+    int none = s == JK_ST_NO_GAME, on = m->active == i;
+    uint32_t rgb;
+    const char *status = half_status(s, &rgb);
+    panel(f, x, y, w, h, none ? JK_RGB_SMOKE : rgb);
+    if (on) {                                      /* the accent frame */
+        jk_fill(f, x, y, w, 4, JK_RGB_DUSK);
+        jk_fill(f, x, y + h - 4, w, 4, JK_RGB_DUSK);
+        jk_fill(f, x, y, 4, h, JK_RGB_DUSK);
+        jk_fill(f, x + w - 4, y, 4, h, JK_RGB_DUSK);
+    }
+    const char *label = m->slot_label[i] ? m->slot_label[i] : i ? JK_S_G_OG : JK_S_G_BE;
+    jk_text(f, JK_FONT_HEAD, x + 40, y + 24, label, none ? JK_RGB_SMOKE : JK_RGB_CHALK);
+    jk_text(f, JK_FONT_BODY, x + 40, y + 24 + jk_font_line_height(JK_FONT_HEAD) + 4, status, rgb);
+    const char *dir = none || !m->slot_dir[i] ? (i ? JK_S_GAME_DIR_NFS : JK_S_GAME_DIR) : m->slot_dir[i];
+    jk_text(f, JK_FONT_HINT, x + 40, y + h - jk_font_line_height(JK_FONT_HINT) - 20, dir, JK_RGB_SMOKE);
+}
+
+static void draw_home2(JkFrame *f, const JkModel *m)
+{
+    chrome(f, m);
+    status_chips(f, m);
+    home_half(f, m, 0);
+    home_half(f, m, 1);
+    static const char *const labels[JK_HOME_COUNT] = { JK_S_PLAY, JK_S_PATCH, JK_S_SETTINGS };
+    for (int i = 0; i < JK_HOME_COUNT; i++)
+        menu_row(f, m, JK_FONT_MENU, JK_HOME_X, JK_HOME2_Y0 + i * JK_HOME2_STEP, JK_HOME2_ITEM_H, labels[i], m->focus == i, 1,
+                 NULL, 0, 0, 0);
+    int dy = JK_HOME2_Y0 + JK_HOME_COUNT * JK_HOME2_STEP + 30;
+    wrap(f, JK_FONT_BODY, JK_HOME_X, dy, 1100, home_description(m), JK_RGB_CHALK);
+    Hint h[4] = { { JK_BTN_CROSS, JK_S_H_SELECT }, { JK_BTN_UPDOWN, JK_S_H_CHOOSE }, { JK_BTN_LEFTRIGHT, JK_S_H_GAME },
+                  { JK_BTN_SQUARE, JK_S_H_HELP } };
+    hint_bar(f, h, 4, JK_S_FOOTER);
+}
+
 static void draw_home(JkFrame *f, const JkModel *m)
 {
+    if (m->ngames >= 2) { draw_home2(f, m); return; }
     chrome(f, m);
     status_chips(f, m);
     static const char *const labels[JK_HOME_COUNT] = { JK_S_PLAY, JK_S_PATCH, JK_S_SETTINGS };
@@ -369,7 +434,7 @@ const char *jk_settings_value(const JkModel *m, int item)
 enum { SET_PX = 1000, SET_PW = 810 };
 static void settings_panel(JkFrame *f, const JkModel *m)
 {
-    int py = JK_SET_Y0, ph = (JK_SET_COUNT - 1) * JK_SET_STEP + JK_SET_ITEM_H;
+    int py = JK_SET_Y0, ph = (JK_SET_COUNT - 1 - (m->no_mods ? 1 : 0)) * JK_SET_STEP + JK_SET_ITEM_H;
     int on = m->set_focus == JK_SET_FPS_HUD ? m->fps_hud : m->set_focus == JK_SET_FRAMERATE ? jk_pace_enabled(m) : 1;
     panel(f, SET_PX, py, SET_PW, ph, on ? JK_RGB_DUSK : JK_RGB_SMOKE);
     int x = SET_PX + 44, w = SET_PW - 88, y = py + 30;
@@ -394,9 +459,11 @@ static void draw_settings(JkFrame *f, const JkModel *m)
     chrome(f, m);
     page_title(f, JK_S_SETTINGS);
     int pace_on = jk_pace_enabled(m);
+    int row = 0;
     for (int i = 0; i < JK_SET_COUNT; i++) {
         int fps = i == JK_SET_FRAMERATE, hud = i == JK_SET_FPS_HUD;
-        menu_row(f, m, JK_FONT_HEAD, JK_SET_X, JK_SET_Y0 + i * JK_SET_STEP, JK_SET_ITEM_H, jk_settings_label(i), m->set_focus == i,
+        if (m->no_mods && i == JK_SET_MODS) continue;                  /* NFS: no mods, no row */
+        menu_row(f, m, JK_FONT_HEAD, JK_SET_X, JK_SET_Y0 + row++ * JK_SET_STEP, JK_SET_ITEM_H, jk_settings_label(i), m->set_focus == i,
                  fps ? pace_on : 1, jk_settings_value(m, i), JK_SET_X + 400,
                  fps ? m->pace != JK_PACE_30 : hud ? m->fps_hud : 0, fps ? m->pace != JK_PACE_60 : hud ? !m->fps_hud : 0);
     }
@@ -521,7 +588,7 @@ static void draw_saves(JkFrame *f, const JkModel *m)
     int x = 194, w = 1570;
     jk_text(f, JK_FONT_HEAD, x, PANEL_Y + 34, JK_S_G_HEAD, JK_RGB_CHALK);
     int y = wrap(f, JK_FONT_BODY, x, PANEL_Y + 110, w, JK_S_G_WHERE, JK_RGB_CHALK);
-    y = path_box(f, x, y + 4, w, JK_S_SAVES_DIR, JK_FONT_HINT);
+    y = path_box(f, x, y + 4, w, m->active == 1 ? JK_S_SAVES_DIR_NFS : JK_S_SAVES_DIR, JK_FONT_HINT);   /* 1.1: each game its own */
     char count[64];
     if (m->saves_profiles > 0) snprintf(count, sizeof count, "%d profile%s found.", m->saves_profiles, m->saves_profiles == 1 ? "" : "s");
     else snprintf(count, sizeof count, "%s", JK_S_G_NONE);
@@ -530,7 +597,7 @@ static void draw_saves(JkFrame *f, const JkModel *m)
     if (m->saves_profiles <= 0) y = wrap(f, JK_FONT_HINT, x, y, w, JK_S_G_NONE_NOTE, JK_RGB_SMOKE) + 6;
     y += 12;
     y = wrap(f, JK_FONT_BODY, x, y, w, JK_S_G_BRING, JK_RGB_CHALK);
-    y = wrap(f, JK_FONT_HINT, x, y + 4, w, JK_S_G_V13, JK_RGB_SMOKE);
+    y = wrap(f, JK_FONT_HINT, x, y + 4, w, m->active == 1 ? JK_S_G_V13_NFS : JK_S_G_V13, JK_RGB_SMOKE);
     y += 10;
     if (m->saves_state == 1) {
         char line[400];
@@ -697,7 +764,7 @@ int jk_patch_square_help(const JkModel *m)
 
 int jk_patch_can_mods(const JkModel *m)
 {
-    if (!m || m->phase == JK_PH_INSTALLING || m->phase == JK_PH_FAILED || jk_two_folders(m)) return 0;
+    if (!m || m->phase == JK_PH_INSTALLING || m->phase == JK_PH_FAILED || jk_two_folders(m) || m->no_mods) return 0;
     switch (m->check.state) {
     case JK_ST_NOT_INSTALLED: case JK_ST_UPDATE: case JK_ST_CHANGED: case JK_ST_READY: return 1;
     default: return 0;
@@ -724,6 +791,7 @@ void jk_patch_failure_body(const JkModel *m, char *out, size_t cap)
     case JK_FAIL_RESTORE: tail = JK_S_P_FAILED_RESTORE; break;
     case JK_FAIL_PENDING_RESTORE: tail = JK_S_P_FAILED_PENDING_RESTORE; break;
     case JK_FAIL_DAMAGED: tail = JK_S_P_FAILED_DAMAGED; break;
+    case JK_FAIL_PREFIX: tail = JK_S_P_FAILED_PREFIX; break;
     default: tail = m->check.has_backup ? JK_S_P_FAILED_CORE_UNDO : JK_S_P_FAILED_B; break;
     }
     size_t n = strlen(m->msg);
@@ -863,7 +931,20 @@ static void check_row(JkFrame *f, int i, JkIcon icon, const char *label, const c
     int y = PANEL_Y + 44 + i * 104;
     jk_status_icon(f, 196, y + 4, 36, icon);
     jk_text(f, JK_FONT_BODY, 256, y - 4, label, JK_RGB_CHALK);
-    if (sub) jk_text(f, JK_FONT_HINT, 256, y + 40, sub, JK_RGB_SMOKE);
+    if (!sub) return;
+    /* a long sub (the unknown exe) takes two lines */
+    const int maxw = 620;
+    char first[160];
+    snprintf(first, sizeof first, "%s", sub);
+    const char *rest = "";
+    while (jk_text_width(JK_FONT_HINT, first) > maxw) {
+        char *sp = strrchr(first, ' ');
+        if (!sp) break;
+        *sp = 0;
+        rest = sub + (sp - first) + 1;
+    }
+    jk_text(f, JK_FONT_HINT, 256, y + 40, first, JK_RGB_SMOKE);
+    if (rest[0]) jk_text(f, JK_FONT_HINT, 256, y + 40 + jk_font_line_height(JK_FONT_HINT) - 4, rest, JK_RGB_SMOKE);
 }
 
 static void draw_checklist(JkFrame *f, const JkModel *m)
@@ -885,6 +966,11 @@ static void draw_checklist(JkFrame *f, const JkModel *m)
         return;
     }
     check_row(f, 0, found ? JK_ICON_OK : bad ? JK_ICON_PENDING : JK_ICON_BAD, JK_S_K_FOLDER, m->game_dir ? m->game_dir : JK_S_GAME_DIR);
+    if (m->exe_any) {                              /* the original game: any speed.exe; v1.3 is told apart */
+        int known = version && m->check.exe_known;
+        check_row(f, 1, known ? JK_ICON_OK : JK_ICON_PENDING, JK_S_K_VERSION,
+                  !version ? JK_S_K_VERSION_SUB : known ? JK_S_K_VERSION_V13 : JK_S_K_VERSION_UNKNOWN);
+    } else
     check_row(f, 1, version ? JK_ICON_OK : s == JK_ST_WRONG_EXE ? JK_ICON_BAD : JK_ICON_PENDING, JK_S_K_VERSION,
               s == JK_ST_WRONG_EXE ? JK_S_K_VERSION_BAD : JK_S_K_VERSION_SUB);
     char sub[64];
@@ -934,7 +1020,7 @@ static void draw_patch(JkFrame *f, const JkModel *m)
     }
     else if (m->phase == JK_PH_RESTORED) { head = JK_S_P_RESTORED; jk_restored_body(m, text, sizeof text); body = text; hc = JK_RGB_OK; }
     else switch (s) {
-    case JK_ST_NO_GAME: head = JK_S_P_NO_GAME; body = JK_S_P_NO_GAME_B; hc = JK_RGB_SIREN_RED; break;
+    case JK_ST_NO_GAME: head = JK_S_P_NO_GAME; body = m->ngames >= 2 && m->active == 1 ? JK_S_P_NO_GAME_B_NFS : JK_S_P_NO_GAME_B; hc = JK_RGB_SIREN_RED; break;
     case JK_ST_WRONG_EXE: head = JK_S_P_WRONG; body = JK_S_P_WRONG_B; hc = JK_RGB_SIREN_RED; break;
     case JK_ST_MISSING_FILES:
         head = JK_S_P_MISSING; hc = JK_RGB_SIREN_RED;
@@ -948,7 +1034,7 @@ static void draw_patch(JkFrame *f, const JkModel *m)
     case JK_ST_CHANGED: head = JK_S_P_CHANGED; body = JK_S_P_CHANGED_B; break;
     case JK_ST_READY: head = JK_S_P_DONE; body = JK_S_P_INSTALLED_B; hc = JK_RGB_OK; break;
     case JK_ST_BAD_PACKAGE: head = JK_S_P_BAD; body = JK_S_P_BAD_B; hc = JK_RGB_SIREN_RED; break;
-    default: head = JK_S_P_READY; body = JK_S_P_READY_B; hc = JK_RGB_CHALK; break;
+    default: head = JK_S_P_READY; body = m->no_mods ? JK_S_P_READY_B_NFS : JK_S_P_READY_B; hc = JK_RGB_CHALK; break;
     }
     panel(f, px, PANEL_Y, pw, PANEL_H, hc == JK_RGB_CHALK ? JK_RGB_SMOKE : hc);
     jk_text(f, JK_FONT_HEAD, tx, PANEL_Y + 40, head, hc);
@@ -956,7 +1042,8 @@ static void draw_patch(JkFrame *f, const JkModel *m)
     if (body) y = wrap(f, JK_FONT_BODY, tx, y, tw, body, JK_RGB_CHALK);
     if (!two && m->phase == JK_PH_IDLE && s == JK_ST_NO_GAME) {
         jk_fill(f, tx, y + 16, tw, 70, JK_RGB_ASPHALT);
-        jk_text(f, JK_FONT_HEAD, tx + 24, y + 16 + (70 - jk_font_line_height(JK_FONT_HEAD)) / 2, JK_S_GAME_DIR, JK_RGB_CHALK);
+        jk_text(f, JK_FONT_HEAD, tx + 24, y + 16 + (70 - jk_font_line_height(JK_FONT_HEAD)) / 2,
+                m->ngames >= 2 && m->active == 1 ? JK_S_GAME_DIR_NFS : JK_S_GAME_DIR, JK_RGB_CHALK);
     }
     if (!two && m->phase == JK_PH_IDLE && s == JK_ST_WRONG_EXE && m->check.found_exe[0]) {
         char found[96];
@@ -1157,24 +1244,42 @@ static const struct { const char *title; const Para *p; int n; } HELP[JK_HELP_CO
 
 const char *jk_help_title(int page) { return page >= 0 && page < JK_HELP_COUNT ? HELP[page].title : ""; }
 
+int jk_help_count(int page) { return page >= 0 && page < JK_HELP_COUNT ? HELP[page].n : 0; }
+
+/* A paragraph's words; on the original-game side the folder, saves and troubleshooting texts name that game's folders. */
+const char *jk_help_text(const JkModel *m, int page, int i)
+{
+    if (page < 0 || page >= JK_HELP_COUNT || i < 0 || i >= HELP[page].n) return "";
+    const char *t = HELP[page].p[i].text;
+    if (!m || m->ngames < 2 || m->active != 1) return t;
+    static const char *const swap[][2] = {
+        { JK_S_GAME_DIR, JK_S_GAME_DIR_NFS }, { JK_S_HF_1, JK_S_HF_1_NFS }, { JK_S_HF_EXE, JK_S_HF_EXE_NFS },
+        { JK_S_HF_4, JK_S_HF_4_NFS }, { JK_S_SAVES_ROOT, JK_S_SAVES_ROOT_NFS }, { JK_S_HT_FOLDER, JK_S_HT_FOLDER_NFS },
+        { JK_S_HT_TWO, JK_S_HT_TWO_NFS },
+    };
+    for (size_t k = 0; k < sizeof swap / sizeof swap[0]; k++)
+        if (!strcmp(t, swap[k][0])) return swap[k][1];
+    return t;
+}
+
 /* One paragraph at y; returns the y below it. */
-static int help_para(JkFrame *f, int x, int y, int w, const Para *p)
+static int help_para(JkFrame *f, int x, int y, int w, const Para *p, const char *text)
 {
     switch (p->kind) {
     case P_HEAD:
-        jk_text(f, JK_FONT_HEAD, x, y, p->text, JK_RGB_DUSK);
+        jk_text(f, JK_FONT_HEAD, x, y, text, JK_RGB_DUSK);
         return y + jk_font_line_height(JK_FONT_HEAD) + 12;
     case P_PATH: {
         int h = jk_font_line_height(JK_FONT_BODY) + 10;
         jk_fill(f, x + 30, y - 2, w - 30, h, JK_RGB_ASPHALT);
-        jk_text(f, JK_FONT_BODY, x + 50, y + 3, p->text, JK_RGB_CHALK);
+        jk_text(f, JK_FONT_BODY, x + 50, y + 3, text, JK_RGB_CHALK);
         return y + h + 8;
     }
     case P_ITEM:
         jk_plate(f, x + 6, y + 14, 12, 12, JK_RGB_DUSK, 255);
-        return wrap(f, JK_FONT_HINT, x + 36, y, w - 36, p->text, JK_RGB_CHALK) + 4;
+        return wrap(f, JK_FONT_HINT, x + 36, y, w - 36, text, JK_RGB_CHALK) + 4;
     default:
-        return wrap(f, JK_FONT_BODY, x, y, w, p->text, JK_RGB_CHALK) + 8;
+        return wrap(f, JK_FONT_BODY, x, y, w, text, JK_RGB_CHALK) + 8;
     }
 }
 
@@ -1197,7 +1302,7 @@ static void draw_help(JkFrame *f, const JkModel *m)
     }
     panel(f, 150, PANEL_Y, 1660, PANEL_H, JK_RGB_DUSK);
     int x = 194, w = 1570, y = PANEL_Y + 30;
-    for (int i = 0; i < HELP[page].n; i++) y = help_para(f, x, y, w, &HELP[page].p[i]);
+    for (int i = 0; i < HELP[page].n; i++) y = help_para(f, x, y, w, &HELP[page].p[i], jk_help_text(m, page, i));
     Hint h[2] = { { JK_BTN_LEFTRIGHT, JK_S_H_PAGE }, { JK_BTN_CIRCLE, JK_S_H_BACK } };
     hint_bar(f, h, 2, m->build_id);
 }

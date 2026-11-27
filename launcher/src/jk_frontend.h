@@ -32,6 +32,23 @@ enum {
     JK_PAD_TOUCHPAD = 0x100000u
 };
 
+/* 1.1: one game the launcher can start. Slot 0 is the Black Edition
+ * (NFSMW), slot 1 the original (NFS). Strings are owned by the host. */
+typedef struct JkGameSlot {
+    const char *key;            /* profile key: "nfsmw" or "nfs" */
+    const char *label;          /* the side's name on Home, e.g. "MOST WANTED - BLACK EDITION" */
+    const char *leaf;           /* folder name under the product root: "NFSMW" / "NFS" */
+    const char *game_dir;       /* the game folder (jk_game_dir_find_leaf) */
+    const char *game_dir_other; /* a second spelling of it, or NULL */
+    const char *data_root;      /* backup, modset, state of this game: System or System/nfs */
+    const char *saves_dir;      /* the game's save folder inside saves root */
+    const char *saves_win;      /* the saves root as Wine sees it: Z:\data\Jk4Speed\Saves */
+    int exe_any;                /* 1: any speed.exe is accepted (no hash lock) */
+    int mods;                   /* 1: the mods engine and MODS screen are on */
+    int require_x360;           /* as JkServices.require_x360, for this slot */
+    const char *files_dir;      /* this game's package folder (manifest + files); NULL: JkServices.files_dir */
+} JkGameSlot;
+
 typedef struct JkServices {
     void *ctx;
     /* Required. Show a finished 1920x1080 BGRX frame. <0: display lost, the
@@ -117,6 +134,11 @@ typedef struct JkServices {
     /* Production package: no test hook (devtools/enable is ignored, the ini
      * gets DXVK_PS4_AUTOTEST=0) and no jk4speed-user.ini. */
     int prod;
+    /* 1.1: the two games. ngames == 0: the old single fields above (game_dir,
+     * data_root, saves_dir, game_dir_other, require_x360) describe slot 0
+     * and there is no second game. */
+    JkGameSlot games[2];
+    int ngames;
 } JkServices;
 
 typedef enum JkAction { JK_START_GAME = 1, JK_LEAVE_HOME } JkAction;
@@ -124,6 +146,7 @@ typedef enum JkAction { JK_START_GAME = 1, JK_LEAVE_HOME } JkAction;
 typedef struct JkDecision {
     JkAction action;
     JkPace pace;       /* for the host's session log; the ini is already written */
+    int game;          /* the slot to start (JkServices.games index) */
 } JkDecision;
 
 /* Runs the launcher until the player starts the game or the system asks the
@@ -136,7 +159,11 @@ int jk_frontend_run(const JkServices *s, JkDecision *out);
 
 typedef struct JkApp {
     JkModel m;
-    const JkServices *s;
+    const JkServices *s;        /* what the code reads: the host's services, or (ngames > 0) view */
+    JkServices view;            /* 1.1: *src with the active game's folders in the old single fields */
+    const JkServices *src;      /* the host's services */
+    const JkGameSlot *slot;     /* the active game, or NULL (ngames == 0: the single game of 1.0) */
+    int active;                 /* its index */
     JkFrame *frame;             /* NULL: no drawing (tests) */
     JkScreenId logs_back;       /* where ○ on Logs & Support returns (Settings or Patch) */
     JkScreenId mods_back;       /* where ○ on Mods returns (Settings or Patch) */
@@ -145,12 +172,14 @@ typedef struct JkApp {
     int done;
     int busy;                   /* a long action ran: the next poll's presses are dropped */
     int mods_recover;           /* jk_modset_recover at open: 1 rolled back, 2 finished, 3 another folder's, 0 none, <0 failed */
-    int pending;                /* JK_MS_PEND_*: a journal of this game folder waits; PLAY opens Patch */
+    int prefix_bad;             /* slot 1: PLAY found the prefix's user.reg unusable; PATCH sets the prefix up again */
+    int pending;              /* JK_MS_PEND_*: a journal of this game folder waits; PLAY opens Patch */
     char pending_why[300];      /* its reason, shown on Patch FAILED */
     JkAction action;
     char last_screen[16];
 } JkApp;
 
+/* 1.1: the host's services with the active side. */
 /* Reads the folders and opens Home (or "The game didn't start"). 0 ok. */
 int jk_app_init(JkApp *a, const JkServices *s, JkFrame *frame);
 /* Handles one poll's newly pressed buttons (one action at most). Returns 1

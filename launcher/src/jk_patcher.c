@@ -104,7 +104,11 @@ static int record_save(const JkPaths *p, const Record *rec)
 /* r4: the launcher composes these two itself (jk_config.h), so whatever file
  * is there under these names is ours, at any hash. */
 #define COMPOSED_INI "jk4speed-dev.ini"
-#define COMPOSED_PROFILE "nfsmw.profile"
+/* 1.1: the composed profile is <profile_key>.profile (default nfsmw). */
+static void composed_profile_name(const JkPaths *p, char *out, size_t cap)
+{
+    snprintf(out, cap, "%s.profile", p->profile_key && p->profile_key[0] ? p->profile_key : "nfsmw");
+}
 
 static Rec *record_find(Record *rec, JkEntryKind kind, const char *path)
 {
@@ -200,6 +204,13 @@ static int accepted(const JkManifest *m, JkEntryKind kind, const char *rel, cons
     return kind == JK_M_SERVER && cur && cur[0] && jk_load_digest(tgt, d) == 0 && jk_manifest_accepts(m, rel, d);
 }
 
+/* I-3: on a first install (no install record yet) an existing Xidi.ini that is not the package's is
+ * the player's: backed up like any replaced file, and put back on Restore. */
+static int players_xidi(const JkEntry *e, int first, const char *cur)
+{
+    return first && e->kind == JK_M_FILE && !strcmp(e->path, "Xidi.ini") && cur && cur[0] && strcmp(cur, e->sha) != 0;
+}
+
 /* ------------------------------------------------------------------ */
 /* Check                                                              */
 /* ------------------------------------------------------------------ */
@@ -269,6 +280,26 @@ static int foreign_gate(const JkPaths *p, Record *rec, char *reason, size_t cap)
     return 0;
 }
 
+/* Reads little-endian fields of a PE header straight from the file. */
+int jk_exe_is_known_v13(const char *path)
+{
+    FILE *f = path ? fopen(path, "rb") : NULL;
+    if (!f) return 0;
+    unsigned char dos[64], nt[96];
+    int ok = 0;
+    if (fread(dos, 1, sizeof dos, f) == sizeof dos && dos[0] == 'M' && dos[1] == 'Z') {
+        unsigned long off = (unsigned long)dos[60] | (unsigned long)dos[61] << 8 | (unsigned long)dos[62] << 16 | (unsigned long)dos[63] << 24;
+        if (off < 0x100000 && fseek(f, (long)off, SEEK_SET) == 0 && fread(nt, 1, sizeof nt, f) == sizeof nt
+            && !memcmp(nt, "PE\0\0", 4) && nt[24] == 0x0b && nt[25] == 0x01) {   /* PE32 optional header */
+            unsigned long stamp = (unsigned long)nt[8] | (unsigned long)nt[9] << 8 | (unsigned long)nt[10] << 16 | (unsigned long)nt[11] << 24;
+            unsigned long base = (unsigned long)nt[52] | (unsigned long)nt[53] << 8 | (unsigned long)nt[54] << 16 | (unsigned long)nt[55] << 24;
+            ok = stamp == 0x438e4c8cul && base == 0x400000ul;
+        }
+    }
+    fclose(f);
+    return ok;
+}
+
 int jk_patch_check(const JkPaths *p, JkCheck *out)
 {
     if (!out) return -1;
@@ -294,8 +325,9 @@ int jk_patch_check(const JkPaths *p, JkCheck *out)
     char path[1024], cur[65];
     const JkEntry *exe = jk_manifest_exe(&m);
     if (jk_fs_join(path, sizeof path, p->game_dir, exe->path) < 0 || !jk_fs_exists(path)) { out->state = JK_ST_NO_GAME; return 0; }
+    out->exe_known = jk_exe_is_known_v13(path);
     sha_or_empty(path, cur);
-    if (strcmp(cur, exe->sha)) {
+    if (!p->exe_any && strcmp(cur, exe->sha)) {
         snprintf(out->found_exe, sizeof out->found_exe, "%.8s", cur[0] ? cur : "unread");
         out->state = JK_ST_WRONG_EXE;
         return 0;
@@ -396,6 +428,7 @@ static int install_core(const JkPaths *p, const JkManifest *m, const char *src_d
     /* room for every file we will write plus the backups we will make (the
      * HD road alone is 532 MB, twice); checked before anything changes */
     long long need = FREE_MARGIN;
+    const int first = !rec->exists;                    /* no install record yet: a first install */
     for (int i = 0; i < m->n; i++) {
         const JkEntry *e = &m->e[i];
         char tgt[1024], cur[65];
@@ -407,7 +440,7 @@ static int install_core(const JkPaths *p, const JkManifest *m, const char *src_d
         }
         if (e->kind == JK_M_CONFIG) { if (!jk_fs_exists(tgt)) need += e->size; continue; }
         sha_or_empty(tgt, cur);
-        if (accepted(m, e->kind, e->path, tgt, cur)) continue;
+        if (accepted(m, e->kind, e->path, tgt, cur) && !players_xidi(e, first, cur)) continue;
         need += e->size;
         if (cur[0] && e->kind != JK_M_SEED) need += jk_fs_size(tgt);   /* backup or .changed copy */
     }
@@ -445,7 +478,7 @@ static int install_core(const JkPaths *p, const JkManifest *m, const char *src_d
         case JK_M_PROFILE:
         case JK_M_SERVER:
             sha_or_empty(tgt, cur);
-            if (accepted(m, e->kind, e->path, tgt, cur)) {
+            if (accepted(m, e->kind, e->path, tgt, cur) && !players_xidi(e, first, cur)) {
                 if (!r) {
                     if (!record_add(rec, e->kind == JK_M_SEED ? "new" : "kept", e->kind, e->sha, e->path) || record_save(p, rec) < 0) {
                         snprintf(reason, cap, "could not write the install record");
@@ -725,8 +758,10 @@ static void remove_composed(const JkPaths *p)
             && jk_fs_copy_checked(bk, path, NULL) == 0)
             jk_fs_remove(bk);
     }
-    if (p->profiles_dir && jk_fs_safe_path(p->profiles_dir, COMPOSED_PROFILE) == 0
-        && jk_fs_join(path, sizeof path, p->profiles_dir, COMPOSED_PROFILE) == 0) {
+    char cpn[80];
+    composed_profile_name(p, cpn, sizeof cpn);
+    if (p->profiles_dir && jk_fs_safe_path(p->profiles_dir, cpn) == 0
+        && jk_fs_join(path, sizeof path, p->profiles_dir, cpn) == 0) {
         sha_or_empty(path, cur);
         if (cur[0] && jk_config_composed_sha(st, "profile", sha) == 0 && !strcmp(cur, sha)) jk_fs_remove(path);
     }

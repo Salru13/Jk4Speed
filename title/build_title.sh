@@ -70,6 +70,15 @@ sha256sum "$OUT/prospero/native/wine64_main.c" "$OUT/prospero/native/pw_diagnost
     "$OUT/prospero/native/jk_title_host.inc" > "$OUT/patched.sha256"
 # r4: the Wine library root is /data/Jk4Speed/System
 grep -q '#define JK_TITLE_DATA_ROOT "/data/Jk4Speed/System"' "$OUT/prospero/native/wine64_main.c" || { echo "build_title: patch did not set the r4 library root" >&2; exit 1; }
+# 1.10 (2026-11-27): create-fself cuts 0x4d0 bytes off the PRX's last RW segment; an object there is
+# not mapped and rtld refuses the module (title stuck on its start picture). A 16 KB unused .bss
+# object linked LAST (PW_PRX_STUBS: after -lc++ in the prospero-clang shim) is what lands in that
+# tail; create-fself counts it, being .bss. check_prx_tail.py proves it below.
+printf 'char jk_bss_tail[0x4000] __attribute__((used, aligned(16)));\n' > "$OUT/jk-bss-tail.c"
+rel="$OUT/orbis/scripts/build-relocatable-wine-ps4.sh"
+grep -q '^"$CC" -shared -Wl,-Bsymbolic -Wl,-soname,relocated_wine_app.prx' "$rel" || { echo "build_title: PRX link line not found" >&2; exit 1; }
+sed -i "s|^\"\$CC\" -shared -Wl,-Bsymbolic -Wl,-soname,relocated_wine_app.prx|\"\$CC\" -std=gnu11 -O2 -fPIC -fno-common -c \"$OUT/jk-bss-tail.c\" -o \"\$PRX_BUILD/jk-bss-tail.o\"\nPW_PRX_STUBS=\"\$PRX_BUILD/jk-bss-tail.o\" \"\$CC\" -shared -Wl,-Bsymbolic -Wl,-soname,relocated_wine_app.prx|" "$rel"
+grep -q 'PW_PRX_STUBS="$PRX_BUILD/jk-bss-tail.o"' "$rel" || { echo "build_title: tail padding not added" >&2; exit 1; }
 
 say "build (TITLE_ID=$TITLE_ID)"
 cat > "$OUT/build-title.sh" <<EOF
@@ -79,7 +88,7 @@ base=$B
 out=$OUT
 export PATH="\$base/native248-build-wine/tools:\$base/private-bin:\$base/deps/rootfs/usr/bin:\$PATH"
 export MESA_BUILD=\$base/native248-platform
-export TITLE_ID=$TITLE_ID TITLE=JK4SPEED PW_BUILD_ID=JK4SPEED-1.0-$TITLE_ID PKG_VERSION=01.00
+export TITLE_ID=$TITLE_ID TITLE=JK4SPEED PW_BUILD_ID=JK4SPEED-1.1-$TITLE_ID PKG_VERSION=01.10
 export PW_ROOT="\$out/prospero" PW_APP_OBJ="\$out/app-obj" PW_BUILD_ROOT="\$out/reloc-build"
 export PW_MODULE_STUBS_DIR="$UROOT/sce_module"
 export PW_EBOOT_NO_RELRO=1 PW_SPLIT_RUNTIME=0 PW_WINE64_WAIT_WATCHDOG=0 PW_WINE64_SERVER_DIRECT_OFF=0 PW_WINE64_HEAP_FLEXIBLE=0
@@ -98,5 +107,7 @@ bad=$(strings -n 8 "$OUT/reloc-build/prx/relocated_wine_app.prx" "$OUT/reloc-bui
       | sort -u | grep -v -x -e /data/prospero-win/dev.conf -e /data/prospero-win/mprotect-nocache \
           -e /data/prospero-win/prefixes/nfsmw/drive_c/users/prospero/Documents/NFS || true)
 [ -z "$bad" ] || { echo "build_title: the title still names $bad" >&2; exit 1; }
+python3 -I "$here/check_prx_tail.py" "$OUT/reloc-build/prx/app.shared.elf" "$OUT/reloc-build/prx/relocated_wine_app.prx" \
+    || { echo "build_title: the console would refuse this PRX (object past the loaded segment)" >&2; exit 1; }
 say "outputs"
 sha256sum "$OUT/reloc-build/eboot.bin" "$OUT/reloc-build/prx/relocated_wine_app.prx" | tee "$OUT/outputs.sha256"

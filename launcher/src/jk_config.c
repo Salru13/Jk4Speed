@@ -71,13 +71,63 @@ int jk_settings_load(const char *state_dir, JkSettings *out)
     return 0;
 }
 
+int jk_active_load(const char *state_dir)
+{
+    char path[1024];
+    if (settings_path(state_dir, path, sizeof path) < 0) return -1;
+    char *text = jk_fs_read(path, 4096, NULL);
+    if (!text) return -1;
+    int r = -1;
+    for (char *line = text, *next; line && *line; line = next) {
+        next = strchr(line, '\n');
+        if (next) *next++ = 0;
+        while (*line == ' ' || *line == '\t') line++;
+        if (strncmp(line, "active", 6)) continue;
+        char *eq = strchr(line, '=');
+        if (!eq) continue;
+        char *v = eq + 1;
+        while (*v == ' ' || *v == '\t') v++;
+        if (v[0] == '0' || v[0] == '1') r = v[0] - '0';
+    }
+    free(text);
+    return r;
+}
+
 int jk_settings_save(const char *state_dir, const JkSettings *s)
 {
     char path[1024], text[96];
     if (!s || settings_path(state_dir, path, sizeof path) < 0 || jk_fs_mkdir_p(state_dir) < 0) return -1;
     int n = snprintf(text, sizeof text, "pace=%s\nfps_hud=%d\nlogs=%d\n", s->pace == JK_PACE_60 ? "60" : "30",
                      s->fps_hud ? 1 : 0, s->logs ? 1 : 0);
+    int act = jk_active_load(state_dir);                    /* 1.1: the remembered game side stays */
+    if (act >= 0) n += snprintf(text + n, sizeof text - (size_t)n, "active=%d\n", act);
     return jk_fs_write_atomic(path, text, (size_t)n);
+}
+
+int jk_active_save(const char *state_dir, int active)
+{
+    char path[1024];
+    if (settings_path(state_dir, path, sizeof path) < 0 || jk_fs_mkdir_p(state_dir) < 0) return -1;
+    char *old = jk_fs_read(path, 4096, NULL);
+    char *out = malloc((old ? strlen(old) : 0) + 32);
+    if (!out) { free(old); return -1; }
+    size_t n = 0;
+    for (char *line = old, *next; line && *line; line = next) {      /* every line but an old active= */
+        next = strchr(line, '\n');
+        size_t len = next ? (size_t)(next - line) : strlen(line);
+        next = next ? next + 1 : NULL;
+        const char *k = line;
+        while (*k == ' ' || *k == '\t') k++;
+        if (!strncmp(k, "active", 6) && strchr(line, '=') && (size_t)(strchr(line, '=') - line) < len) continue;
+        memcpy(out + n, line, len);
+        n += len;
+        out[n++] = '\n';
+    }
+    n += (size_t)sprintf(out + n, "active=%d\n", active ? 1 : 0);
+    int r = jk_fs_write_atomic(path, out, n);
+    free(out);
+    free(old);
+    return r;
 }
 
 /* ------------------------------------------------------------------ */
@@ -350,7 +400,9 @@ static void profile_debug(Buf *b, const JkConfigIn *in)
     put(b, in->set.logs ? "winedebug = +tid,err+all,+loaddll" : "winedebug = -all", "\n");
     put(b, "env = PW_NATIVE_ALERT_UMTX=1", "\n");
     put(b, in->set.fps_hud ? "env = DXVK_PS4_FPS_HUD=fps" : "env = DXVK_PS4_FPS_HUD=0", "\n");
-    put(b, in->set.logs ? "env = DXVK_LOG_LEVEL=info" : "env = DXVK_LOG_LEVEL=none", "\n");
+    /* the runtime takes at most 5 env lines (pw_game_profile.c PW_GAME_DEBUG_ENV_MAX; a sixth refuses
+     * the whole profile and the game never starts): with logs on DXVK keeps its default level, info */
+    if (!in->set.logs) put(b, "env = DXVK_LOG_LEVEL=none", "\n");
     snprintf(line, sizeof line, "env = DXVK_STATE_CACHE_PATH=%s", in->cache_dir);
     put(b, line, "\n");
     put(b, "env = DXVK_PS4_NATIVE_SERVER_CPU=38", "\n");
@@ -358,6 +410,11 @@ static void profile_debug(Buf *b, const JkConfigIn *in)
         snprintf(line, sizeof line, "env = DXVK_PS4_LOG_DIR=%s", in->logs_dir);
         put(b, line, "\n");
     }
+}
+
+static const char *profile_key_of(const JkConfigIn *in)
+{
+    return in->profile_key && in->profile_key[0] ? in->profile_key : "nfsmw";
 }
 
 int jk_config_write_profile(const JkConfigIn *in, char *why, size_t cap)
@@ -393,6 +450,12 @@ int jk_config_write_profile(const JkConfigIn *in, char *why, size_t cap)
         if (in_debug) continue;                   /* the writer owns [debug] */
         const char *k = key_of(s, scratch, sizeof scratch);
         if (in_input && k && strcasecmp(k, "mode")) continue;   /* the binds come from CONTROLS */
+        if (in_app && k && !strcasecmp(k, "id")) {
+            char idl[128];
+            snprintf(idl, sizeof idl, "id = %s", profile_key_of(in));
+            put(&b, idl, "\n");
+            continue;
+        }
         if (in_app && k && (!strcasecmp(k, "executable") || !strcasecmp(k, "working_directory") || !strcasecmp(k, "prefix")))
             continue;
         put(&b, s, "\n");
@@ -403,12 +466,13 @@ int jk_config_write_profile(const JkConfigIn *in, char *why, size_t cap)
     if (in_app && !app_done) profile_application(&b, in);
     profile_debug(&b, in);
     free(base);
-    char path[1024];
+    char path[1024], pname[96];
     int r = -1;
     if (b.bad) say(why, cap, "the profile base is too large");
-    else if (jk_fs_join(path, sizeof path, in->profiles_dir, "nfsmw.profile") < 0) say(why, cap, "profiles folder path too long");
+    else if (snprintf(pname, sizeof pname, "%s.profile", profile_key_of(in)) >= (int)sizeof pname
+             || jk_fs_join(path, sizeof path, in->profiles_dir, pname) < 0) say(why, cap, "profiles folder path too long");
     else if (jk_fs_mkdir_p(in->profiles_dir) < 0) say(why, cap, "could not make the profiles folder");
-    else if (jk_fs_write_atomic(path, b.p, b.n) < 0) say(why, cap, "could not write nfsmw.profile");
+    else if (jk_fs_write_atomic(path, b.p, b.n) < 0) say(why, cap, "could not write the profile");
     else { r = 0; chmod(path, 0666); note_composed(in->state_dir, "profile", path); }
     free(b.p);
     return r;

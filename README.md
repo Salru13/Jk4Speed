@@ -2,7 +2,7 @@
 
 # JK4SPEED
 
-Play your own PC copy of **Need for Speed: Most Wanted (2005)** on a PS4 with GoldHEN, with the Xbox 360 look.
+Play your own PC copy of **Need for Speed: Most Wanted (2005)** on a PS4 with GoldHEN. **Two games in one launcher:** the Black Edition with the Xbox 360 look, and the original PC look in widescreen.
 
 [![release](https://img.shields.io/github/v/release/Salru13/Jk4Speed)](https://github.com/Salru13/Jk4Speed/releases/latest)
 [![downloads](https://img.shields.io/github/downloads/Salru13/Jk4Speed/total?label=downloads)](https://github.com/Salru13/Jk4Speed/releases)
@@ -10,37 +10,63 @@ Play your own PC copy of **Need for Speed: Most Wanted (2005)** on a PS4 with Go
 ![platform](https://img.shields.io/badge/platform-PS4%20(GoldHEN)-0070d1)
 ![license](https://img.shields.io/badge/launcher-LGPL--2.1--or--later-blue)
 
-JK4SPEED is a PS4 app with its own launcher, the Wine runtime for the console from [JkFlow](https://github.com/Salru13/JkFlow) and a native DXVK renderer. You bring the game and download the mods from their authors; JK4SPEED checks your Most Wanted folder, builds the Xbox 360 look on your console and starts the game. JK4SPEED ships **no game files and no mod files**. This repository holds the source of the launcher and the title build, and the licence texts shipped in the package. Player guide: [README-player.md](README-player.md). More pages: [docs/](docs/).
+JK4SPEED is a PS4 app with its own launcher, the Wine runtime for the console from [JkFlow](https://github.com/Salru13/JkFlow) and a native DXVK renderer. You bring the game (and, for the Xbox 360 look, the mods from their authors); JK4SPEED checks your Most Wanted folder, installs what it needs on your console and starts the game. JK4SPEED ships **no game files and no mod files**. This repository holds the source of the launcher and the title build, and the licence texts shipped in the package. Player guide: [README-player.md](README-player.md). More pages: [docs/](docs/).
+
+## Two games, one launcher (new in 1.10)
+
+The Home screen is split in two. Press **left / right** to pick a side; **PLAY**, **PATCH** and **SETTINGS** then work for the side you picked. **ABOUT** is shared.
+
+| | Left: **MOST WANTED · BLACK EDITION** | Right: **MOST WANTED · ORIGINAL** |
+|---|---|---|
+| Look | The **Xbox 360 look** (Xbox 360 Stuff Pack, optional HD HUD and HD roads) | The **original PC look**: the game's own colours, roads and shadows, no mods |
+| Game folder | `/data/Jk4Speed/NFSMW` | `/data/Jk4Speed/NFS` |
+| Which copy | PC **v1.3 Black Edition** only | Your PC copy of Most Wanted: **Black Edition or the regular edition**, both work. Best on **v1.3** (the usual patched PC install): everything is on. Another `speed.exe` starts too, but without the 30/60 pacer (the launcher says "Unknown speed.exe"). A disc copy still protected by SafeDisc does not start. |
+| Mods | Xbox 360 Stuff Pack (required), Upscaled HUD and HD Road Textures (optional) | None: you need **no mod downloads** at all |
+| What JK4SPEED adds | Its runtime files, the Xbox 360 look built from the pack | Its runtime files and ThirteenAG's **Widescreen Fix** (included): **16:9 widescreen**, HUD and movies placed for 16:9, **1080p from the first start** |
+| Frame rate | 30 or 60 FPS (SETTINGS) | 30 or 60 FPS (SETTINGS) |
+| Saves | `/data/Jk4Speed/Saves` | `/data/Jk4Speed/Saves-NFS` (kept apart) |
+
+You can use one side or both. The two sides never share game files, settings or saves: you can even put the same PC copy in both folders and play it either way.
 
 ## Where everything goes
 
 ```
 /data/Jk4Speed/                          <- made by JK4SPEED at its first start (capital J and S)
-├── NFSMW/                               <- your game: PC v1.3 Black Edition
+├── NFSMW/                               <- LEFT side: PC v1.3 Black Edition (Xbox 360 look)
 │   ├── speed.exe                        <- directly in NFSMW, not in a folder inside it
 │   └── (all the other game files and folders)
-└── Mods/                                <- the mod downloads, STILL ZIPPED (do not unpack)
-    ├── Complex_Installation-...-001.zip <- Xbox 360 Stuff Pack (required), every part
-    ├── NFSMWUHUD01022026b.7z            <- Upscaled HUD (optional)
-    └── nfsmw-hd-road-textures.zip       <- HD Road Textures (optional)
+├── NFS/                                 <- RIGHT side: the original look (Black Edition or regular edition)
+│   ├── speed.exe                        <- directly in NFS, not in a folder inside it
+│   └── (all the other game files and folders)
+├── Mods/                                <- left side only: the mod downloads, STILL ZIPPED (do not unpack)
+│   ├── Complex_Installation-...-001.zip <- Xbox 360 Stuff Pack (required for the left side), every part
+│   ├── NFSMWUHUD01022026b.7z            <- Upscaled HUD (optional)
+│   └── nfsmw-hd-road-textures.zip       <- HD Road Textures (optional)
+├── Saves/                               <- left side saves (made by JK4SPEED)
+└── Saves-NFS/                           <- right side saves (made by JK4SPEED)
 ```
 
 1. **Install the PKG** with GoldHEN's package installer (or your usual homebrew PKG installer).
 2. **Open JK4SPEED once.** The first start shows **SETTING UP JK4SPEED** for a minute or two: it sets up the
-   Windows files and makes `/data/Jk4Speed/` with `Mods`, `Saves` and `Logs`. When you see the Home screen, close
-   JK4SPEED. Do not make these folders yourself: the names are case-sensitive (`Jk4Speed`, `Mods`).
-3. **Copy your game** (PC v1.3 Black Edition, untouched) into `/data/Jk4Speed/NFSMW`, over FTP or from a USB drive.
-   `speed.exe` must be directly in `NFSMW`.
-4. **Copy the mod downloads, still zipped,** into `/data/Jk4Speed/Mods` (over FTP: file names without spaces).
-5. **Open JK4SPEED, press PATCH, then PLAY.** The first PATCH takes **about 5 minutes**. The progress bar can stay at 0 for several minutes while JK4SPEED saves your original files, reads the mod zips and builds the mod files; the text above the bar shows what it is doing. This is normal: do not close JK4SPEED or turn off the PS4.
+   Windows files and makes `/data/Jk4Speed/` with `Mods`, `Saves`, `Saves-NFS` and `Logs`. When you see the Home
+   screen, close JK4SPEED. Do not make these folders yourself: the names are case-sensitive (`Jk4Speed`, `Mods`).
+3. **Copy your game**, over FTP or from a USB drive (`speed.exe` must be directly in the folder):
+   - **Xbox 360 look (left):** PC v1.3 Black Edition, untouched, into `/data/Jk4Speed/NFSMW`, and the mod downloads,
+     still zipped, into `/data/Jk4Speed/Mods` (over FTP: file names without spaces).
+   - **Original look (right):** your PC Most Wanted (Black Edition or regular edition) into `/data/Jk4Speed/NFS`.
+     No mods needed.
+4. **Open JK4SPEED, pick the side with left / right, press PATCH, then PLAY.** On the left side the first PATCH
+   takes **about 5 minutes** (the progress bar can stay at 0 for several minutes while it saves your original files,
+   reads the mod zips and builds the mod files; the text above the bar shows what it is doing; do not close JK4SPEED
+   or turn off the PS4). On the right side PATCH takes seconds.
 
 ## Requirements
 
 | What | Details |
 |---|---|
 | Console | A **jailbroken PS4** running **GoldHEN** (to install homebrew PKGs). |
-| Game | Your own copy of **Need for Speed: Most Wanted PC v1.3 Black Edition**. No other version is supported. `speed.exe` must be v1.3 (6,029,312 bytes). |
-| Mods | The **Xbox 360 Stuff Pack (required)** and, if you like, the Upscaled HUD and HD Road Textures, downloaded from their authors' pages (below). |
+| Game | Your own PC copy of **Need for Speed: Most Wanted**. Left side (Xbox 360 look): **v1.3 Black Edition** only, `speed.exe` v1.3 (6,029,312 bytes). Right side (original look): Black Edition or regular edition, best on v1.3. |
+| Mods | Left side only: the **Xbox 360 Stuff Pack (required)** and, if you like, the Upscaled HUD and HD Road Textures, downloaded from their authors' pages (below). The right side needs none. |
 | USB drive | To bring the mods and your PC saves to the console (FTP to `/data/Jk4Speed/` works too). |
 
 Use only a copy of Most Wanted you own. JK4SPEED does not include the game.
@@ -53,31 +79,24 @@ Get the `.pkg` from the [Releases](https://github.com/Salru13/Jk4Speed/releases)
 
 Download the `.pkg` from the Releases page (optional: check it on a PC, see [Official builds and verification](#official-builds-and-verification)), then:
 
-1. **Install the PKG** with GoldHEN's package installer (or your usual homebrew PKG installer).
-2. **Open JK4SPEED once.** The first start shows **SETTING UP JK4SPEED** for a minute or two: it sets up the
-   Windows files and makes `/data/Jk4Speed/` with `Mods`, `Saves` and `Logs`. When you see the Home screen, close
-   JK4SPEED. Do not make these folders yourself: the names are case-sensitive (`Jk4Speed`, `Mods`).
-3. **Copy your game** (PC v1.3 Black Edition, untouched) into `/data/Jk4Speed/NFSMW`, over FTP or from a USB drive.
-   `speed.exe` must be directly in `NFSMW`.
-4. **Copy the mod downloads, still zipped,** into `/data/Jk4Speed/Mods` (over FTP: file names without spaces).
-5. **Open JK4SPEED, press PATCH, then PLAY.** The first PATCH takes **about 5 minutes**. The progress bar can stay at 0 for several minutes while JK4SPEED saves your original files, reads the mod zips and builds the mod files; the text above the bar shows what it is doing. This is normal: do not close JK4SPEED or turn off the PS4.
+Then follow **Where everything goes** above: open JK4SPEED once, copy your game into `NFSMW` (Xbox 360 look) and/or `NFS` (original look), pick the side with left / right, press **PATCH**, then **PLAY**.
 
 ## The launcher: PLAY, PATCH, SETTINGS
 
-The JK4SPEED launcher opens first. It has three items on its home screen:
+The JK4SPEED launcher opens first. Its Home screen shows both games side by side; **left / right** picks one. The three items work for the side you picked:
 
 | Item | What it does |
 |---|---|
-| **PLAY** | Starts the game. |
-| **PATCH** | Checks your game folder, installs the JK4SPEED files and builds the mod files from the archives in `/data/Jk4Speed/Mods` (or `USB:/Jk4Speed/`). Anything it replaces is backed up first, and **Restore** puts it back. `SETTINGS > MODS` (or `PATCH > □ Mods`): the Xbox 360 Stuff Pack is **REQUIRED**; the Upscaled HUD and HD Road Textures each have an ON / OFF switch (ON by default). The first PATCH takes a few minutes (the pack is about 1 GB); the screen shows what it is reading, building and checking, in MB. |
-| **SETTINGS** | **FRAME RATE**, **SHOW FPS / MS**, **MODS**, **CONTROLS** (controller layout), **SAVE GAMES**, **LOGS & SUPPORT** (Enable logs, Clear logs, Save support bundle) and **ABOUT**. |
+| **PLAY** | Starts the picked game. |
+| **PATCH** | Checks the picked game's folder and installs the JK4SPEED files. Anything it replaces is backed up first, and **Restore** puts it back. **Left side:** it also builds the mod files from the archives in `/data/Jk4Speed/Mods` (or `USB:/Jk4Speed/`); `SETTINGS > MODS` (or `PATCH > □ Mods`): the Xbox 360 Stuff Pack is **REQUIRED**, the Upscaled HUD and HD Road Textures each have an ON / OFF switch (ON by default); the first PATCH takes a few minutes (the pack is about 1 GB). **Right side:** it installs the runtime files and the Widescreen Fix, and moves aside other fixes from a PC install (Fusion Fix, Extra Options) so only the widescreen picture changes the game; Restore puts them back. |
+| **SETTINGS** | For the picked game: **FRAME RATE**, **SHOW FPS / MS**, **MODS** (left side only), **CONTROLS** (controller layout), **SAVE GAMES**, **LOGS & SUPPORT** (Enable logs, Clear logs, Save support bundle) and **ABOUT**. |
 
 On the game's title screen, wait until "Please press START" has fully faded in before you press ✕.
 
-## Mods — where to get them
+## Mods — where to get them (left side only)
 
-JK4SPEED looks like the Xbox 360 version of Most Wanted because of community mods. **JK4SPEED does not
-include them.** Download each one from its author, the same way you bring the game. Please download from
+The **left side** looks like the Xbox 360 version of Most Wanted because of community mods. **JK4SPEED does not
+include them.** The right side (original look) needs no mods: skip this section if you only play that one. Download each one from its author, the same way you bring the game. Please download from
 these pages so the authors get the credit and the visits.
 
 | Mod | Author | Official page | Archive file name | SHA-256 |
@@ -159,9 +178,16 @@ default layout back. One button per function (no combinations). Options (pause),
 
 ## Save games
 
-Your saves live in `/data/Jk4Speed/Saves/NFS Most Wanted/`, one folder per profile. **SETTINGS → SAVE GAMES**
-shows where. Saves from **PC v1.3 Black Edition** are supported; saves made with other mods (extra cars, for
-example) may not load.
+Each game keeps its own saves, one folder per profile; the two never mix:
+
+| Side | Save folder |
+|---|---|
+| Left (Black Edition, Xbox 360 look) | `/data/Jk4Speed/Saves/NFS Most Wanted/` |
+| Right (original look) | `/data/Jk4Speed/Saves-NFS/NFS Most Wanted/` |
+
+**SETTINGS → SAVE GAMES** (on the side you picked) shows that side's folder, and Import / Export / Player name work
+on that side only. Saves from a PC v1.3 install are supported; saves made with other mods (extra cars, for example)
+may not load.
 
 ### Bring your PC save
 
@@ -201,23 +227,45 @@ above. Forks are welcome under the code licences, but they must not call themsel
 
 ## FAQ
 
+### Which side should I pick?
+
+- **Left, MOST WANTED · BLACK EDITION:** the Xbox 360 look (colours, lighting and effects of the Xbox 360 version, optional HD HUD and HD roads). Needs PC v1.3 Black Edition and the Xbox 360 Stuff Pack download.
+- **Right, MOST WANTED · ORIGINAL:** the game as it looks on PC (its own yellow-tinted colours, roads and shadows), in 16:9 widescreen and 1080p. Works with the Black Edition or the regular edition, and needs no mod downloads.
+
+You can set up both and switch on the Home screen with left / right.
+
 ### Where does my game go?
 
-Copy the whole game folder of Most Wanted PC v1.3 Black Edition into `/data/Jk4Speed/NFSMW`, over FTP or with a USB drive. `speed.exe` must be directly in this folder, not in a folder inside it. Upper or lower case of `NFSMW` does not matter. Then open Patch and press the cross button to install. Only use a copy of Most Wanted you own.
+- **Left side:** copy the whole game folder of Most Wanted PC v1.3 Black Edition into `/data/Jk4Speed/NFSMW`.
+- **Right side:** copy the whole game folder of your PC Most Wanted (Black Edition or regular edition) into `/data/Jk4Speed/NFS`.
 
-Folder names on the PS4 are case-sensitive: use exactly `/data/Jk4Speed` (capital J and S). `/data/Jk4speed` or `/data/jk4speed` is a different folder that JK4SPEED does not read. The easiest way: open JK4SPEED once first; it makes `/data/Jk4Speed/` with `Mods`, `Saves` and `Logs` for you. Only the game folder `NFSMW` may be written in any case (`nfsmw` works too), and the mod zip names can be anything.
+Use FTP or a USB drive. `speed.exe` must be directly in that folder, not in a folder inside it. Upper or lower case of `NFSMW` / `NFS` does not matter. Then pick the side on the Home screen, open Patch and press the cross button to install. Only use a copy of Most Wanted you own.
+
+Folder names on the PS4 are case-sensitive: use exactly `/data/Jk4Speed` (capital J and S). `/data/Jk4speed` or `/data/jk4speed` is a different folder that JK4SPEED does not read. The easiest way: open JK4SPEED once first; it makes `/data/Jk4Speed/` with `Mods`, `Saves`, `Saves-NFS` and `Logs` for you. Only the game folders `NFSMW` and `NFS` may be written in any case, and the mod zip names can be anything.
+
+### Can I put the same game in both folders?
+
+Yes. Copy it twice, once into `NFSMW` and once into `NFS`. Each side installs its own files in its own folder and keeps its own settings and saves, so the two never get in each other's way.
+
+### My PC copy already has mods or fixes in it (right side)
+
+PATCH on the right side moves aside the fixes that would change the game beyond the widescreen picture (an older Widescreen Fix, Fusion Fix, Extra Options) and backs them up; **Restore** (triangle on the Patch screen) puts all of them back. For the cleanest result copy an install without mods.
 
 ### Game not found
 
-The folder must be `/data/Jk4Speed/NFSMW`, with `speed.exe` directly in it.
+The folder must be `/data/Jk4Speed/NFSMW` (left side) or `/data/Jk4Speed/NFS` (right side), with `speed.exe` directly in it.
 
 ### Two game folders
 
-The console sees `NFSMW` and `nfsmw` as two folders. Keep only one, then start Jk4Speed again. Jk4Speed does not guess which one is yours, and it changes nothing until there is only one.
+The console sees `NFSMW` and `nfsmw` (or `NFS` and `nfs`) as two folders. Keep only one, then start Jk4Speed again. Jk4Speed does not guess which one is yours, and it changes nothing until there is only one.
 
 ### Unsupported game version
 
-Only Most Wanted PC v1.3 Black Edition works. Copy the game folder of a v1.3 Black Edition install from your PC.
+On the **left side** only Most Wanted PC v1.3 Black Edition works: copy the game folder of a v1.3 Black Edition install from your PC. The **right side** takes any `speed.exe`; on v1.3 everything is on, another version starts without the 30/60 pacer ("Unknown speed.exe"). A disc copy still protected by SafeDisc does not start on the console.
+
+### Why does the original look more yellow and brighter than the Black Edition side?
+
+That is the original PC look: Most Wanted's own colour filter (Visual Treatment and Overbright) gives its well-known golden tint and bright roads in the sun. JK4SPEED does not change colours on the right side (no colour filter, no gamma, no shadow tweaks). The left side looks different because the Xbox 360 Stuff Pack replaces the game's shaders with the Xbox 360 ones.
 
 ### 30 FPS or 60 FPS?
 
@@ -276,7 +324,7 @@ No. Settings you change before the first Patch are saved and used from the first
 
 ### Where are my saves?
 
-In `/data/Jk4Speed/Saves`, one folder per profile inside `NFS Most Wanted`. To bring a PC save: copy `Documents\NFS Most Wanted` to `USB:/Jk4Speed/saves/`, open Settings > Save games and press the square button Import. Your current saves are backed up first. To take them to a PC: Settings > Save games, cross button Export to USB; the copy goes to `USB:/Jk4Speed/saves/<date>/`. Saves from v1.3 Black Edition work. Saves made with other mods (extra cars, for example) may not load.
+Left side: `/data/Jk4Speed/Saves`; right side: `/data/Jk4Speed/Saves-NFS`; one folder per profile inside `NFS Most Wanted`. The two never mix. Everything below works on the side you picked. To bring a PC save: copy `Documents\NFS Most Wanted` to `USB:/Jk4Speed/saves/`, open Settings > Save games and press the square button Import. Your current saves are backed up first. To take them to a PC: Settings > Save games, cross button Export to USB; the copy goes to `USB:/Jk4Speed/saves/<date>/`. Saves from v1.3 Black Edition work. Saves made with other mods (extra cars, for example) may not load.
 
 ### What is Settings > Show FPS / ms?
 
@@ -291,6 +339,10 @@ It shows the frames per second and the frame time in ms in the top right corner 
 ### The game didn't start
 
 In Settings > Logs & Support turn on Enable logs, play again, then save a support bundle.
+
+### The game stopped before its first picture after I turned on Enable logs (1.00 / 1.01)
+
+Fixed in 1.10. In 1.00 and 1.01, Enable logs made the game's runtime settings one line too long, so the game never started while logs were on. Update to 1.10, or turn Enable logs off in 1.00 / 1.01.
 
 ### Official build or unofficial build?
 
@@ -338,7 +390,7 @@ This builds the assets and runs every test with ASan and UBSan. The package buil
 ## Credits
 
 - The Xbox 360 Stuff Pack by elaymm4, Toru the Red Fox, xan1242 and many others ([nfsmods.xyz/mod/1200](https://nfsmods.xyz/mod/1200)), the Upscaled HUD by LunicAura106 ([nfsmods.xyz/mod/1096](https://nfsmods.xyz/mod/1096)) and the HD Road Textures by N4SRazer ([nfsaddons.com](https://www.nfsaddons.com/downloads/nfsmw/tools/5410/nfsmw-hd-road-textures.html)), downloaded by the player. Every name from their credits is in [CREDITS.md](CREDITS.md).
-- [Ultimate ASI Loader](https://github.com/ThirteenAG/Ultimate-ASI-Loader) by ThirteenAG, [Xidi](https://github.com/samuelgr/Xidi) by Samuel Grossman, [Xenon Effects](https://github.com/xan1242/NFSMW_XenonEffects) by xan1242.
+- [Ultimate ASI Loader](https://github.com/ThirteenAG/Ultimate-ASI-Loader) by ThirteenAG, [Xidi](https://github.com/samuelgr/Xidi) by Samuel Grossman, [Xenon Effects](https://github.com/xan1242/NFSMW_XenonEffects) by xan1242, and ThirteenAG's [Widescreen Fix](https://github.com/ThirteenAG/WidescreenFixesPack) (GPL-3.0, release `nfsmw`, included for the original-look side).
 - [orbis-win](https://github.com/plastikman/orbis-win) and the PS4 Wine port by [plastikman](https://github.com/plastikman); the original Wine console port by [mpereiraesaa](https://github.com/mpereiraesaa); [orbis-compat](https://github.com/orbis-ports/orbis-compat), the [OpenOrbis](https://github.com/OpenOrbis) toolchain and the [orbis-porting-kit](https://github.com/orbis-ports/orbis-porting-kit).
 - Wine, Mesa/RADV, [DXVK](https://github.com/doitsujin/dxvk) (Philip Rebohle, Joshua Ashton), LLVM: the stack underneath. TweetNaCl (public domain) checks the Official Build signature. The launcher font is Ubuntu Sans.
 - The JK4SPEED launcher, the Wine runtime from [JkFlow](https://github.com/Salru13/JkFlow) and Native DXVK by XxXJoker13XxX.

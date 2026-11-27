@@ -1635,8 +1635,624 @@ static void damaged_journal_has_way_out(void)
     tmp_rm_rf(e.root);
 }
 
+/* ---- 1.1: two games (JkGameSlot) ---- */
+
+#define REG_SH "[Software\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Explorer\\\\Shell Folders] 1700000000\n"
+#define REG_USH "[Software\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Explorer\\\\User Shell Folders] 1700000000\n"
+#define REG_BE "Z:\\\\data\\\\Jk4Speed\\\\Saves"
+
+typedef struct Two { Env e; char nfs[300], nfs_data[300], nfs_saves[400]; } Two;
+
+/* be: 0 none, 1 a game folder, 2 installed too. nfs: 1 = its folder has a speed.exe. */
+static void two_new(Two *t, int be, int nfs, int with_reg)
+{
+    Env *e = &t->e;
+    env_new(e, be != 0, be == 2);
+    snprintf(t->nfs, sizeof t->nfs, "%s/Jk4Speed/NFS", e->root);
+    snprintf(t->nfs_data, sizeof t->nfs_data, "%s/Jk4Speed/System/nfs", e->root);
+    snprintf(t->nfs_saves, sizeof t->nfs_saves, "%s/Jk4Speed/Saves-NFS/NFS Most Wanted", e->root);
+    if (nfs) {
+        tmp_put(t->nfs, "speed.exe", "whatever exe the player has");
+        tmp_put(t->nfs, "GLOBAL/a", "a");
+    }
+    if (with_reg)
+        tmp_put(e->data, "prefix/user.reg", "WINE REGISTRY Version 2\n\n" REG_SH "\"Personal\"=\"" REG_BE "\"\n\n" REG_USH
+                "\"Personal\"=str(2):\"" REG_BE "\"\n");
+    JkServices *s = &e->s;
+    s->games[0] = (JkGameSlot){ "nfsmw", "MOST WANTED - BLACK EDITION", "NFSMW", e->game, NULL, e->data, e->saves,
+                                "Z:\\data\\Jk4Speed\\Saves", 0, 1, 0, NULL };
+    s->games[1] = (JkGameSlot){ "nfs", "MOST WANTED - ORIGINAL", "NFS", t->nfs, NULL, t->nfs_data, t->nfs_saves,
+                                "Z:\\data\\Jk4Speed\\Saves-NFS", 1, 0, 0, NULL };
+    s->ngames = 2;
+}
+
+static void two_games_none(void)
+{
+    Two t; two_new(&t, 0, 0, 0);
+    CHECK_EQ(jk_app_init(&app, &t.e.s, NULL), 0);
+    CHECK_EQ(app.m.ngames, 2);
+    CHECK_EQ(app.m.active, 0);
+    CHECK_EQ(app.m.slot_state[0], JK_ST_NO_GAME);
+    CHECK_EQ(app.m.slot_state[1], JK_ST_NO_GAME);
+    press(JK_PAD_CROSS);                               /* PLAY: opens Patch (the folder help), nothing starts */
+    CHECK(!app.done);
+    CHECK_EQ(app.m.screen, JK_SCR_PATCH);
+    tmp_rm_rf(t.e.root);
+}
+
+static void two_games_pick_present(void)
+{
+    Two t; two_new(&t, 0, 1, 0);
+    jk_app_init(&app, &t.e.s, NULL);
+    CHECK_EQ(app.m.active, 1);
+    CHECK_EQ(app.m.slot_state[0], JK_ST_NO_GAME);
+    CHECK_EQ(app.m.slot_state[1], JK_ST_NOT_INSTALLED);
+    CHECK_EQ(app.m.check.state, JK_ST_NOT_INSTALLED);   /* any speed.exe is accepted */
+    CHECK(app.m.no_mods);
+    tmp_rm_rf(t.e.root);
+}
+
+static void switch_right_left(void)
+{
+    Two t; two_new(&t, 2, 1, 0);
+    jk_app_init(&app, &t.e.s, NULL);
+    CHECK_EQ(app.m.active, 0);
+    CHECK_EQ(app.m.check.state, JK_ST_READY);
+    press(JK_PAD_RIGHT);
+    CHECK_EQ(app.m.active, 1);
+    CHECK_EQ(app.m.check.state, JK_ST_NOT_INSTALLED);
+    CHECK(app.m.game_dir == t.e.s.games[1].game_dir);
+    press(JK_PAD_RIGHT);                               /* already on the right */
+    CHECK_EQ(app.m.active, 1);
+    jk_app_init(&app, &t.e.s, NULL);                   /* remembered in System/state/launcher.ini */
+    CHECK_EQ(app.m.active, 1);
+    press(JK_PAD_LEFT);
+    CHECK_EQ(app.m.active, 0);
+    CHECK_EQ(app.m.check.state, JK_ST_READY);
+    char buf[256];
+    CHECK(tmp_get(t.e.data, "state/launcher.ini", buf, sizeof buf) > 0 && strstr(buf, "active=0"));
+    open_settings();                                   /* left/right keep their meaning off Home */
+    CHECK_EQ(app.m.screen, JK_SCR_SETTINGS);
+    press(JK_PAD_RIGHT);
+    CHECK_EQ(app.m.active, 0);
+    tmp_rm_rf(t.e.root);
+}
+
+static void switch_keeps_records_apart(void)
+{
+    Two t; two_new(&t, 1, 1, 0);
+    jk_app_init(&app, &t.e.s, NULL);
+    press(JK_PAD_CROSS);                               /* PLAY -> Patch (not installed) */
+    press(JK_PAD_CROSS);                               /* PATCH side 0 */
+    CHECK_EQ(app.m.phase, JK_PH_DONE);
+    CHECK_EQ(app.m.check.state, JK_ST_READY);
+    press(JK_PAD_CIRCLE);
+    CHECK_EQ(app.m.screen, JK_SCR_HOME);
+    CHECK_EQ(app.m.slot_state[0], JK_ST_READY);
+    CHECK_EQ(app.m.slot_state[1], JK_ST_NOT_INSTALLED);
+    press(JK_PAD_RIGHT);
+    CHECK_EQ(app.m.check.state, JK_ST_NOT_INSTALLED);
+    CHECK(!app.m.check.has_backup);
+    CHECK(!tmp_exists(t.nfs, "d3d9.dll"));
+    CHECK(tmp_exists(t.e.data, "state/installed.txt"));
+    CHECK(!tmp_exists(t.nfs_data, "state/installed.txt"));
+    tmp_rm_rf(t.e.root);
+}
+
+static void nfs_no_mods(void)
+{
+    Two t; two_new(&t, 2, 1, 0);
+    jk_app_init(&app, &t.e.s, NULL);
+    press(JK_PAD_RIGHT);
+    open_settings();
+    CHECK_EQ(app.m.screen, JK_SCR_SETTINGS);
+    press(JK_PAD_DOWN);
+    CHECK_EQ(app.m.set_focus, JK_SET_FPS_HUD);
+    press(JK_PAD_DOWN);
+    CHECK_EQ(app.m.set_focus, JK_SET_CONTROLS);        /* no MODS row */
+    press(JK_PAD_UP);
+    CHECK_EQ(app.m.set_focus, JK_SET_FPS_HUD);
+    press(JK_PAD_CIRCLE);
+    press(JK_PAD_UP); press(JK_PAD_CROSS);             /* PATCH (focus was SETTINGS) */
+    CHECK_EQ(app.m.screen, JK_SCR_PATCH);
+    CHECK(!jk_patch_can_mods(&app.m));
+    press(JK_PAD_CROSS);                               /* install */
+    CHECK_EQ(app.m.phase, JK_PH_DONE);
+    CHECK(tmp_exists(t.nfs, "d3d9.dll"));
+    CHECK(!tmp_exists(t.nfs_data, "modset"));          /* the mods engine never ran */
+    CHECK(!tmp_exists(t.nfs_data, "backup/pristine"));
+    CHECK(!tmp_exists(t.e.data, "modset"));
+    tmp_rm_rf(t.e.root);
+}
+
+/* 1.1: the original game installs from its own package folder (jk4speed-files-nfs: the same
+ * files plus ThirteenAG's Widescreen Fix, which the Black Edition gets from X360 Stuff); the
+ * Black Edition side never gets it. */
+static void nfs_installs_its_own_package(void)
+{
+    Two t; two_new(&t, 1, 1, 0);
+    char pkg[400], he[65], hd[65], hw[65], m[1024];
+    static const char WSF[] = "classic widescreen fix asi";
+    snprintf(pkg, sizeof pkg, "%s/pkg-nfs", t.e.root);
+    sha_of(EXE, he); sha_of(D3D9, hd); sha_of(WSF, hw);
+    snprintf(m, sizeof m, "exe speed.exe %s\nrequire GLOBAL\nfile d3d9.dll %s %zu\n"
+             "file scripts/NFSMostWanted.WidescreenFix.asi %s %zu\n", he, hd, strlen(D3D9), hw, strlen(WSF));
+    tmp_put(pkg, "manifest.txt", m);
+    tmp_put(pkg, "d3d9.dll", D3D9);
+    tmp_put(pkg, "scripts/NFSMostWanted.WidescreenFix.asi", WSF);
+    {   /* its own config base: the Black Edition's without the X360 shadow knobs (make_pkg.sh does the same) */
+        size_t n = 0;
+        char *base = jk_fs_read(JK_ROOT_DIR "/title/config/jk4speed.ini.base", 1 << 20, &n), out[8192], *o = out;
+        CHECK(base && strstr(base, "DXVK_PS4_NFS_SHADOW_DETAIL="));
+        for (char *l = base; base && *l;) {
+            char *e = strchr(l, '\n');
+            size_t len = e ? (size_t)(e - l) + 1 : strlen(l);
+            if (strncmp(l, "DXVK_PS4_NFS_SHADOW_DETAIL=", 27) && strncmp(l, "DXVK_PS4_NFS_SHADOWS_NV=", 24)) { memcpy(o, l, len); o += len; }
+            l += len;
+        }
+        *o = 0;
+        free(base);
+        tmp_put(pkg, "jk4speed.ini.base", out);
+        char dst[600];
+        snprintf(dst, sizeof dst, "%s/nfsmw.profile.base", pkg);
+        jk_fs_copy_checked(JK_ROOT_DIR "/title/config/nfsmw.profile.base", dst, NULL);
+    }
+    t.e.s.games[1].files_dir = pkg;
+    jk_app_init(&app, &t.e.s, NULL);
+    CHECK_EQ(app.m.slot_state[1], JK_ST_NOT_INSTALLED);
+    press(JK_PAD_RIGHT);
+    press(JK_PAD_CROSS);                               /* PLAY -> Patch (not installed) */
+    press(JK_PAD_CROSS);                               /* PATCH the original */
+    CHECK_EQ(app.m.phase, JK_PH_DONE);
+    CHECK_EQ(app.m.check.state, JK_ST_READY);
+    CHECK(tmp_exists(t.nfs, "d3d9.dll"));
+    CHECK(tmp_exists(t.nfs, "scripts/NFSMostWanted.WidescreenFix.asi"));
+    char ini[8192];
+    CHECK(tmp_get(t.nfs, "jk4speed-dev.ini", ini, sizeof ini) > 0);   /* composed from its own base */
+    CHECK(strstr(ini, "DXVK_PS4_NFS_PACE=") != NULL);
+    CHECK(strstr(ini, "SHADOW_DETAIL") == NULL && strstr(ini, "SHADOWS_NV") == NULL);
+    press(JK_PAD_CIRCLE);
+    CHECK_EQ(app.m.slot_state[1], JK_ST_READY);        /* Home checks it against its own manifest */
+    press(JK_PAD_LEFT);
+    press(JK_PAD_CROSS);                               /* PLAY -> Patch */
+    press(JK_PAD_CROSS);                               /* PATCH the Black Edition */
+    CHECK_EQ(app.m.phase, JK_PH_DONE);
+    CHECK(tmp_exists(t.e.game, "jk4speed-dev.ini"));   /* its own package, as in 1.01 */
+    CHECK(tmp_get(t.e.game, "jk4speed-dev.ini", ini, sizeof ini) > 0 && strstr(ini, "DXVK_PS4_NFS_SHADOW_DETAIL=2"));
+    CHECK(!tmp_exists(t.e.game, "scripts/NFSMostWanted.WidescreenFix.asi"));
+    tmp_rm_rf(t.e.root);
+}
+
+static void nfs_play_sets_saves(void)
+{
+    Two t; two_new(&t, 0, 1, 1);
+    static const uint32_t script[] = { JK_PAD_CROSS, JK_PAD_CROSS, 0, JK_PAD_CROSS };
+    t.e.script = script;
+    t.e.script_n = 4;
+    JkDecision d;
+    CHECK_EQ(jk_frontend_run(&t.e.s, &d), 0);
+    CHECK_EQ(d.action, JK_START_GAME);
+    CHECK_EQ(d.game, 1);
+    char buf[8192];
+    CHECK(tmp_get(t.e.data, "prefix/user.reg", buf, sizeof buf) > 0);
+    CHECK(strstr(buf, "\"Personal\"=\"Z:\\\\data\\\\Jk4Speed\\\\Saves-NFS\""));
+    CHECK(strstr(buf, "\"Personal\"=str(2):\"Z:\\\\data\\\\Jk4Speed\\\\Saves-NFS\""));
+    /* the Widescreen Fix's HKCU settings: 1080p from the first start, Install Dir = this game's folder */
+    char *k = strstr(buf, "[Software\\\\EA Games\\\\Need for Speed Most Wanted] ");
+    CHECK(k && strstr(k, "\"g_RacingResolution\"=dword:87800438\n"));
+    char want[700], *w = want;
+    w += snprintf(want, sizeof want, "\"Install Dir\"=\"Z:");
+    for (const char *c = t.nfs; *c; c++) { if (*c == '/') { *w++ = '\\'; *w++ = '\\'; } else *w++ = *c; }
+    strcpy(w, "\"\n");
+    CHECK(k && strstr(k, want));
+    CHECK(tmp_get(t.nfs_data, "state/launcher.log", buf, sizeof buf) > 0 && strstr(buf, "start pace=30"));
+    char prof[600];
+    snprintf(prof, sizeof prof, "%s/nfs.profile", t.e.prof);       /* the profile of this game's key */
+    CHECK(jk_fs_exists(prof));
+    jk_frontend_release();
+    tmp_rm_rf(t.e.root);
+}
+
+static void be_play_unchanged(void)
+{
+    Two t; two_new(&t, 2, 1, 1);
+    char before[2048], after[2048];
+    tmp_get(t.e.data, "prefix/user.reg", before, sizeof before);
+    jk_app_init(&app, &t.e.s, NULL);
+    press(JK_PAD_CROSS);
+    CHECK(app.done);
+    CHECK_EQ(app.action, JK_START_GAME);
+    CHECK_EQ(app.active, 0);
+    tmp_get(t.e.data, "prefix/user.reg", after, sizeof after);
+    CHECK(!strcmp(before, after));                     /* already the BE saves: not written */
+    tmp_rm_rf(t.e.root);
+}
+
+static void nfs_play_refused_without_user_reg(void)
+{
+    Two t; two_new(&t, 0, 1, 0);
+    jk_app_init(&app, &t.e.s, NULL);
+    press(JK_PAD_CROSS); press(JK_PAD_CROSS);          /* Patch, install */
+    CHECK_EQ(app.m.check.state, JK_ST_READY);
+    press(JK_PAD_CROSS);                               /* PLAY from Patch */
+    CHECK(!app.done);
+    CHECK_EQ(app.m.screen, JK_SCR_PATCH);
+    CHECK_EQ(app.m.phase, JK_PH_FAILED);
+    CHECK_EQ(app.m.fail_kind, JK_FAIL_PREFIX);
+    CHECK(strstr(app.m.msg, "user.reg") != NULL);
+    tmp_rm_rf(t.e.root);
+}
+
+/* I-2: slot 0 is 1.01's: a missing or odd user.reg never blocks PLAY */
+static void be_play_without_user_reg_starts(void)
+{
+    Two t; two_new(&t, 2, 1, 0);                       /* no prefix/user.reg */
+    char buf[2048];
+    jk_app_init(&app, &t.e.s, NULL);
+    CHECK_EQ(app.m.check.state, JK_ST_READY);
+    press(JK_PAD_CROSS);
+    CHECK(app.done);
+    CHECK_EQ(app.action, JK_START_GAME);
+    CHECK(tmp_get(t.e.data, "state/launcher.log", buf, sizeof buf) > 0 && strstr(buf, "saves folder not set"));
+    CHECK(!tmp_exists(t.e.data, "prefix/user.reg"));
+    tmp_rm_rf(t.e.root);
+    /* a user.reg without a Personal line */
+    Two u; two_new(&u, 2, 1, 0);
+    tmp_put(u.e.data, "prefix/user.reg", "WINE REGISTRY Version 2\n\n" REG_SH "\"Desktop\"=\"x\"\n");
+    jk_app_init(&app, &u.e.s, NULL);
+    press(JK_PAD_CROSS);
+    CHECK(app.done);
+    CHECK_EQ(app.action, JK_START_GAME);
+    tmp_get(u.e.data, "prefix/user.reg", buf, sizeof buf);
+    CHECK(strstr(buf, "\"Desktop\"=\"x\"") && !strstr(buf, "Personal"));   /* never rewritten */
+    tmp_rm_rf(u.e.root);
+}
+
+/* the seed of this test carries a user.reg */
+static void put_seed_reg(Env *e)
+{
+    static const char REG[] = "WINE REGISTRY Version 2\n\n" REG_SH "\"Personal\"=\"" REG_BE "\"\n\n" REG_USH
+                              "\"Personal\"=str(2):\"" REG_BE "\"\n";
+    char hr[65], idx[400], rel[100];
+    sha_of(REG, hr);
+    snprintf(rel, sizeof rel, "seed/objects/%s", hr);
+    tmp_put(e->pkg, rel, REG);
+    snprintf(idx, sizeof idx, "JKSEED 1\nf %s %zu user.reg obj\n", hr, strlen(REG));
+    tmp_put(e->pkg, "seed/index.txt", idx);
+}
+
+/* I-2: slot 1 with the marker but no user.reg is an incomplete prefix: PATCH seeds it again */
+static void nfs_missing_user_reg_is_reseeded(void)
+{
+    Two t; two_new(&t, 0, 1, 0);
+    put_seed_reg(&t.e);
+    char prefix[400], buf[2048];
+    snprintf(prefix, sizeof prefix, "%s/prefix", t.e.data);
+    jk_fs_mkdir_p(prefix);
+    jk_app_init(&app, &t.e.s, NULL);
+    CHECK_EQ(jk_app_setup(&app), 1);                   /* first seed */
+    CHECK(tmp_exists(prefix, "user.reg"));
+    char reg[450];
+    snprintf(reg, sizeof reg, "%s/user.reg", prefix);
+    jk_fs_remove(reg);                                 /* marker stays, user.reg is gone */
+    jk_app_init(&app, &t.e.s, NULL);
+    CHECK_EQ(app.m.active, 1);
+    press(JK_PAD_CROSS); press(JK_PAD_CROSS);          /* PLAY -> Patch, PATCH */
+    CHECK_EQ(app.m.phase, JK_PH_DONE);
+    CHECK(tmp_exists(prefix, "user.reg"));
+    CHECK_EQ(app.m.check.state, JK_ST_READY);
+    press(JK_PAD_CROSS);                               /* PLAY */
+    CHECK(app.done);
+    CHECK_EQ(app.action, JK_START_GAME);
+    tmp_get(t.e.data, "prefix/user.reg", buf, sizeof buf);
+    CHECK(strstr(buf, "Saves-NFS"));
+    tmp_rm_rf(t.e.root);
+}
+
+/* I-2: a user.reg PLAY cannot use on slot 1 is repaired by the PATCH that the failed PLAY points to */
+static void nfs_bad_user_reg_play_then_patch(void)
+{
+    Two t; two_new(&t, 0, 1, 0);
+    put_seed_reg(&t.e);
+    char prefix[400];
+    snprintf(prefix, sizeof prefix, "%s/prefix", t.e.data);
+    jk_fs_mkdir_p(prefix);
+    jk_app_init(&app, &t.e.s, NULL);
+    CHECK_EQ(jk_app_setup(&app), 1);
+    tmp_put(t.e.data, "prefix/user.reg", "WINE REGISTRY Version 2\n\n" REG_SH "\"Desktop\"=\"x\"\n");
+    jk_app_init(&app, &t.e.s, NULL);
+    press(JK_PAD_CROSS); press(JK_PAD_CROSS);          /* Patch screen, PATCH (nothing to seed yet: bad file unnoticed) */
+    press(JK_PAD_CROSS);                               /* PLAY from Patch: refused */
+    CHECK(!app.done);
+    CHECK_EQ(app.m.fail_kind, JK_FAIL_PREFIX);
+    CHECK(strstr(app.m.msg, "Personal") != NULL);
+    CHECK_EQ(app.m.check.state, JK_ST_UPDATE);         /* Patch needed: the prefix */
+    press(JK_PAD_CROSS);                               /* the offered way out */
+    CHECK_EQ(app.m.phase, JK_PH_DONE);
+    press(JK_PAD_CROSS);
+    CHECK(app.done);
+    CHECK_EQ(app.action, JK_START_GAME);
+    char buf[2048];
+    tmp_get(t.e.data, "prefix/user.reg", buf, sizeof buf);
+    CHECK(strstr(buf, "Saves-NFS"));
+    tmp_rm_rf(t.e.root);
+}
+
+/* ---- 1.1: the NFS slot patches like the Black Edition, in its own folders ---- */
+
+#define DINPUT_OURS "our dinput8 (loads Xidi)"
+#define DINPUT_THEIRS "the player's own dinput8.dll, an ASI loader that does not load Xidi"
+
+/* The package as the real one: d3d9, dinput8, Xidi.32.dll, Xidi.ini, dxvk.conf and the ini. */
+static void two_full_pkg(Two *t)
+{
+    Env *e = &t->e;
+    char he[65], hd[65], hi[65], hx[65], hc[65], hini[65], hini60[65], hxi[65], m[2048], src[400], dst[400];
+    sha_of(EXE, he); sha_of(D3D9, hd); sha_of(DINPUT_OURS, hi); sha_of("our xidi32", hx); sha_of("dxvk conf", hc);
+    /* the package's ini is what the launcher composes (so a compose over it is not "a foreign ini") */
+    static char ini30[8192], ini60[8192];
+    {
+        char dir[400];
+        snprintf(dir, sizeof dir, "%s/inigen", e->root);
+        mkdir(dir, 0755);
+        JkConfigIn in;
+        memset(&in, 0, sizeof in);
+        in.files_dir = e->pkg;
+        in.game_dir = dir;
+        char why[200];
+        for (int k = 0; k < 2; k++) {
+            in.set.pace = k ? JK_PACE_60 : JK_PACE_30;
+            CHECK_EQ(jk_config_write_ini(&in, why, sizeof why), 0);
+            char path[500];
+            snprintf(path, sizeof path, "%s/jk4speed-dev.ini", dir);
+            size_t n = 0;
+            char *txt = jk_fs_read(path, sizeof ini30, &n);
+            memcpy(k ? ini60 : ini30, txt, n + 1);
+            free(txt);
+        }
+    }
+    sha_of(ini30, hini); sha_of(ini60, hini60);
+    tmp_put(e->pkg, "jk4speed-dev.ini", ini30);
+    tmp_put(e->pkg, "dinput8.dll", DINPUT_OURS);
+    tmp_put(e->pkg, "Xidi.32.dll", "our xidi32");
+    tmp_put(e->pkg, "dxvk.conf", "dxvk conf");
+    snprintf(src, sizeof src, JK_ROOT_DIR "/title/config/Xidi.ini");
+    snprintf(dst, sizeof dst, "%s/Xidi.ini", e->pkg);
+    jk_fs_copy_checked(src, dst, NULL);
+    long long xsize = 0;
+    jk_fs_sha256(dst, hxi, &xsize);
+    snprintf(m, sizeof m,
+             "exe speed.exe %s\nrequire GLOBAL\nfile d3d9.dll %s %zu\nfile dinput8.dll %s %zu\nfile Xidi.32.dll %s %zu\n"
+             "file Xidi.ini %s %lld\nfile dxvk.conf %s %zu\nfile jk4speed-dev.ini %s %zu\naccept jk4speed-dev.ini %s\n",
+             he, hd, strlen(D3D9), hi, strlen(DINPUT_OURS), hx, strlen("our xidi32"), hxi, xsize, hc, strlen("dxvk conf"),
+             hini, strlen(ini30), hini60);
+    tmp_put(e->pkg, "manifest.txt", m);
+}
+
+/* Every file under dir as "<sha256>  <path>", sorted; pruned: find -path patterns to leave out. */
+static void snap(const char *dir, const char *prune, char *out, size_t cap)
+{
+    char cmd[1200];
+    snprintf(cmd, sizeof cmd, "cd '%s' 2>/dev/null && find . -type f %s -print0 | sort -z | xargs -0 -r sha256sum", dir, prune);
+    FILE *p = popen(cmd, "r");
+    size_t n = 0;
+    out[0] = 0;
+    if (!p) return;
+    while (n + 1 < cap && fgets(out + n, (int)(cap - n), p)) n += strlen(out + n);
+    pclose(p);
+}
+
+#define BE_DATA_PRUNE "-not -path './nfs/*' -not -path './prefix/*' -not -name launcher.log -not -name launcher.ini"
+
+static void nfs_patch_like_be_and_restores(void)
+{
+    Two t; two_new(&t, 1, 1, 1);
+    two_full_pkg(&t);
+    tmp_put(t.nfs, "dinput8.dll", DINPUT_THEIRS);               /* the player's own ASI loader */
+    tmp_put(t.nfs, "scripts/ExtraOptions.asi", "the player's asi");
+    tmp_put(t.nfs, "unlisted.txt", "not in the manifest");
+    char before[8192], after[8192], b[1024];
+    snap(t.nfs, "", before, sizeof before);
+    jk_app_init(&app, &t.e.s, NULL);
+    press(JK_PAD_CIRCLE);
+    press(JK_PAD_CROSS); press(JK_PAD_CROSS);                    /* BE: PLAY -> Patch, install */
+    CHECK_EQ(app.m.phase, JK_PH_DONE);
+    press(JK_PAD_CIRCLE);
+    press(JK_PAD_RIGHT);
+    CHECK_EQ(app.active, 1);
+    press(JK_PAD_CROSS); press(JK_PAD_CROSS);                    /* NFS: PLAY -> Patch, install */
+    CHECK_EQ(app.m.phase, JK_PH_DONE);
+    /* 1: the same package files as the Black Edition, and the composed ini */
+    static const char *const files[] = { "d3d9.dll", "dinput8.dll", "Xidi.32.dll", "Xidi.ini", "dxvk.conf", "jk4speed-dev.ini" };
+    for (size_t i = 0; i < sizeof files / sizeof files[0]; i++) {
+        char a[1024], c[1024];
+        CHECK(tmp_get(t.nfs, files[i], a, sizeof a) > 0);
+        CHECK(tmp_get(t.e.game, files[i], c, sizeof c) > 0);
+        CHECK(!strcmp(a, c));                                    /* the same bytes in both folders */
+    }
+    CHECK(tmp_get(t.nfs, "dinput8.dll", b, sizeof b) > 0 && !strcmp(b, DINPUT_OURS));
+    /* 3: nothing outside the manifest is touched, no mods engine ran, no X360 gate */
+    CHECK(tmp_get(t.nfs, "scripts/ExtraOptions.asi", b, sizeof b) > 0 && !strcmp(b, "the player's asi"));
+    CHECK(tmp_get(t.nfs, "unlisted.txt", b, sizeof b) > 0 && !strcmp(b, "not in the manifest"));
+    CHECK(!tmp_exists(t.nfs_data, "modset"));
+    CHECK(!tmp_exists(t.nfs_data, "backup/pristine"));
+    /* 2: the player's dinput8.dll is backed up under the NFS data_root, not the Black Edition's */
+    CHECK(tmp_get(t.nfs_data, "backup/dinput8.dll", b, sizeof b) > 0 && !strcmp(b, DINPUT_THEIRS));
+    CHECK(!tmp_exists(t.e.data, "backup/dinput8.dll"));
+    /* 4: nfs.profile: the same display, input and key binds as nfsmw.profile; the cache is this game's */
+    char np[4096], bp[4096], want[400];
+    CHECK(tmp_get(t.e.prof, "nfs.profile", np, sizeof np) > 0);
+    CHECK(tmp_get(t.e.prof, "nfsmw.profile", bp, sizeof bp) > 0);
+    CHECK(strstr(np, "desktop = 1920x1080") && strstr(np, "l1 = ctrl") && strstr(np, "r1 = shift") && strstr(np, "r3 = c"));
+    CHECK(strstr(np, "id = nfs\n") && strstr(bp, "id = nfsmw\n"));
+    snprintf(want, sizeof want, "env = DXVK_STATE_CACHE_PATH=%s/cache", t.nfs_data);
+    CHECK(strstr(np, want) != NULL);
+    snprintf(want, sizeof want, "env = DXVK_STATE_CACHE_PATH=%s/cache", t.e.data);
+    CHECK(strstr(bp, want) != NULL && strstr(np, want) == NULL);
+    /* 2: Restore puts the NFS folder back byte for byte */
+    press(JK_PAD_TRIANGLE);
+    CHECK_EQ(app.m.dialog, JK_DLG_RESTORE);
+    press(JK_PAD_CROSS);
+    CHECK_EQ(app.m.phase, JK_PH_RESTORED);
+    snap(t.nfs, "", after, sizeof after);
+    if (strcmp(before, after)) fprintf(stderr, "--- before\n%s--- after\n%s---\n", before, after);
+    CHECK(before[0] && !strcmp(before, after));
+    tmp_rm_rf(t.e.root);
+}
+
+/* I-4: slot 0's interrupted PATCH is recovered and said whatever side was remembered */
+static void be_interrupted_with_nfs_remembered(void)
+{
+    Two t; two_new(&t, 2, 1, 1);
+    char sd[400];
+    snprintf(sd, sizeof sd, "%s/state", t.e.data);
+    jk_active_save(sd, 1);                              /* the player last had NFS */
+    tmp_put(t.e.data, "modset/journal.txt", "JK4MS 2\nstate swapping\n");
+    jk_app_init(&app, &t.e.s, NULL);
+    CHECK_EQ(app.m.active, 0);                          /* opens on the affected side */
+    CHECK_EQ(app.mods_recover, 1);
+    CHECK_EQ(app.m.screen, JK_SCR_INTERRUPTED);
+    CHECK(!tmp_exists(t.e.data, "modset/journal.txt")); /* rolled back at the open */
+    press(JK_PAD_CIRCLE);
+    CHECK_EQ(app.m.screen, JK_SCR_HOME);
+    press(JK_PAD_RIGHT);                                /* the other side is still reachable */
+    CHECK_EQ(app.m.active, 1);
+    tmp_rm_rf(t.e.root);
+}
+
+/* I-3: a player's own Xidi.ini (first install, no record, bytes differ from the package's) is backed up
+ * and comes back byte for byte on Restore */
+static void nfs_own_xidi_ini_restored(void)
+{
+    Two t; two_new(&t, 1, 1, 1);
+    two_full_pkg(&t);
+    tmp_put(t.nfs, "Xidi.ini", "[Mapper]\nthe player's own xidi setup\n");
+    char before[8192], after[8192], b[1024];
+    snap(t.nfs, "", before, sizeof before);
+    jk_app_init(&app, &t.e.s, NULL);
+    press(JK_PAD_RIGHT);
+    CHECK_EQ(app.active, 1);
+    press(JK_PAD_CROSS); press(JK_PAD_CROSS);                    /* NFS: PLAY -> Patch, install */
+    CHECK_EQ(app.m.phase, JK_PH_DONE);
+    CHECK(tmp_get(t.nfs_data, "backup/Xidi.ini", b, sizeof b) > 0 && strstr(b, "xidi setup") != NULL);
+    press(JK_PAD_TRIANGLE);
+    press(JK_PAD_CROSS);
+    CHECK_EQ(app.m.phase, JK_PH_RESTORED);
+    snap(t.nfs, "", after, sizeof after);
+    if (strcmp(before, after)) fprintf(stderr, "--- before\n%s--- after\n%s---\n", before, after);
+    CHECK(before[0] && !strcmp(before, after));
+    CHECK(tmp_get(t.nfs, "Xidi.ini", b, sizeof b) > 0 && !strcmp(b, "[Mapper]\nthe player's own xidi setup\n"));
+    tmp_rm_rf(t.e.root);
+}
+
+/* I-3: with an install record already there (1.01's Black Edition install), a differing Xidi.ini is
+ * handled as before: kept, no backup */
+static void be_existing_record_xidi_unchanged(void)
+{
+    Two t; two_new(&t, 2, 1, 1);
+    two_full_pkg(&t);
+    tmp_put(t.e.game, "Xidi.ini", "[Mapper]\nowner's composed xidi\n");
+    jk_app_init(&app, &t.e.s, NULL);
+    CHECK_EQ(app.active, 0);
+    press(JK_PAD_CROSS); press(JK_PAD_CROSS);                    /* PLAY -> Patch (new files in the package), install */
+    CHECK_EQ(app.m.phase, JK_PH_DONE);
+    CHECK(!tmp_exists(t.e.data, "backup/Xidi.ini"));
+    char rec[4096];
+    CHECK(tmp_get(t.e.data, "state/installed.txt", rec, sizeof rec) > 0 && strstr(rec, "kept file") && strstr(rec, "Xidi.ini"));
+    CHECK(!strstr(rec, "backup file"));
+    tmp_rm_rf(t.e.root);
+}
+
+/* Settings are per slot, with the same defaults; changing one slot's never changes the other's. */
+static void settings_per_slot_independent(void)
+{
+    Two t; two_new(&t, 2, 1, 1);
+    jk_app_init(&app, &t.e.s, NULL);
+    CHECK_EQ(app.m.pace, JK_PACE_30);
+    open_settings();
+    press(JK_PAD_RIGHT);                                         /* BE: 60 FPS */
+    CHECK_EQ(app.m.pace, JK_PACE_60);
+    press(JK_PAD_DOWN); press(JK_PAD_RIGHT);                     /* BE: Show FPS on */
+    CHECK_EQ(app.m.fps_hud, 1);
+    press(JK_PAD_CIRCLE);
+    press(JK_PAD_RIGHT);                                         /* NFS: its own defaults */
+    CHECK_EQ(app.active, 1);
+    CHECK_EQ(app.m.pace, JK_PACE_30);
+    CHECK_EQ(app.m.fps_hud, 0);
+    char buf[256];
+    CHECK(!tmp_exists(t.nfs_data, "state/launcher.ini") || (tmp_get(t.nfs_data, "state/launcher.ini", buf, sizeof buf) > 0 && !strstr(buf, "pace=60")));
+    press(JK_PAD_LEFT);
+    CHECK_EQ(app.m.pace, JK_PACE_60);                            /* the BE kept its choice */
+    CHECK_EQ(app.m.fps_hud, 1);
+    tmp_rm_rf(t.e.root);
+}
+
+static void slot_records_never_cross(void)
+{
+    Two t; two_new(&t, 1, 1, 1);
+    two_full_pkg(&t);
+    jk_app_init(&app, &t.e.s, NULL);
+    press(JK_PAD_CROSS); press(JK_PAD_CROSS);                    /* BE installed */
+    press(JK_PAD_CIRCLE);
+    press(JK_PAD_RIGHT);
+    press(JK_PAD_CROSS); press(JK_PAD_CROSS);                    /* NFS installed */
+    CHECK_EQ(app.m.check.state, JK_ST_READY);
+    char be_g[8192], be_d[8192], nfs_g[8192], nfs_d[8192], a[8192];
+    snap(t.e.game, "", be_g, sizeof be_g);
+    snap(t.e.data, BE_DATA_PRUNE, be_d, sizeof be_d);
+    snap(t.nfs, "", nfs_g, sizeof nfs_g);
+    snap(t.nfs_data, "-not -name launcher.log", nfs_d, sizeof nfs_d);
+    CHECK(be_d[0] && nfs_d[0]);
+    /* Restore on NFS leaves the Black Edition's folder, record and backup as they were */
+    press(JK_PAD_TRIANGLE); press(JK_PAD_CROSS);
+    CHECK_EQ(app.m.phase, JK_PH_RESTORED);
+    snap(t.e.game, "", a, sizeof a);
+    CHECK(!strcmp(a, be_g));
+    snap(t.e.data, BE_DATA_PRUNE, a, sizeof a);
+    CHECK(!strcmp(a, be_d));
+    CHECK(tmp_exists(t.e.data, "state/installed.txt") && !tmp_exists(t.nfs_data, "state/installed.txt"));
+    /* ... and Restore on the Black Edition leaves NFS as it is (patch NFS again first) */
+    press(JK_PAD_CIRCLE);
+    CHECK_EQ(app.m.screen, JK_SCR_HOME);
+    press(JK_PAD_CROSS); press(JK_PAD_CROSS);                    /* NFS installed again */
+    snap(t.nfs, "", nfs_g, sizeof nfs_g);
+    snap(t.nfs_data, "-not -name launcher.log", nfs_d, sizeof nfs_d);
+    press(JK_PAD_CIRCLE);
+    press(JK_PAD_LEFT);
+    CHECK_EQ(app.active, 0);
+    press(JK_PAD_DOWN); press(JK_PAD_CROSS);                     /* PATCH on the Black Edition */
+    CHECK_EQ(app.m.screen, JK_SCR_PATCH);
+    press(JK_PAD_TRIANGLE); press(JK_PAD_CROSS);
+    CHECK_EQ(app.m.phase, JK_PH_RESTORED);
+    snap(t.nfs, "", a, sizeof a);
+    CHECK(!strcmp(a, nfs_g));
+    snap(t.nfs_data, "-not -name launcher.log", a, sizeof a);
+    CHECK(!strcmp(a, nfs_d));
+    CHECK(!tmp_exists(t.e.data, "state/installed.txt") && tmp_exists(t.nfs_data, "state/installed.txt"));
+    tmp_rm_rf(t.e.root);
+}
+
 int main(void)
 {
+    RUN(nfs_patch_like_be_and_restores);
+    RUN(nfs_own_xidi_ini_restored);
+    RUN(be_interrupted_with_nfs_remembered);
+    RUN(be_existing_record_xidi_unchanged);
+    RUN(slot_records_never_cross);
+    RUN(settings_per_slot_independent);
+    if (getenv("JK_FE_QUICK")) return jk_test_report("test_frontend");   /* only the 1.1 two-game cases (the full walk is slow) */
+    RUN(two_games_none);
+    RUN(two_games_pick_present);
+    RUN(switch_right_left);
+    RUN(switch_keeps_records_apart);
+    RUN(nfs_no_mods);
+    RUN(nfs_installs_its_own_package);
+    RUN(nfs_play_sets_saves);
+    RUN(be_play_unchanged);
+    RUN(nfs_play_refused_without_user_reg);
+    RUN(be_play_without_user_reg_starts);
+    RUN(nfs_missing_user_reg_is_reseeded);
+    RUN(nfs_bad_user_reg_play_then_patch);
     RUN(recover_ignores_other_game_dir);
     RUN(restore_without_pristine_removes_our_files);
     RUN(restore_returns_player_ini_and_first_kept);

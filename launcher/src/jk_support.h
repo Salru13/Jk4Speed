@@ -26,6 +26,7 @@ typedef struct JkSupportIn {
     const char *runtime_root;  /* radv.log; may be NULL; NULL: <logs_dir>/radv.log */
     const char *profiles_dir;  /* /data/Jk4Speed/System/profiles (nfsmw.profile); may be NULL */
     const char *usb_dir;     /* a USB drive's root, or NULL */
+    const char *profile_key; /* 1.1: "nfsmw" (NULL) or "nfs": the composed <key>.profile */
     const char *build_id, *local_user;
     const char *stamp;       /* folder name, e.g. "2026-11-17_2105"; NULL: bundle-N */
     /* Extra logs (absolute paths, NULL-terminated). NULL: the defaults, from

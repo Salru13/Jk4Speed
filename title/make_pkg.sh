@@ -144,6 +144,39 @@ printf 'GLOBAL\nTRACKS\nCARS\nFRONTEND\n' > "$OUT/require.txt"
 # r4: no ini, profile or server lines (the launcher composes the first two; the server is in sce_module/)
 python3 -I "$launcher/tools/make_manifest.py" "$STAGE/jk4speed-files" --require-list "$OUT/require.txt"
 
+# 1.1: the original game's package folder. Exactly the files the Black Edition's PATCH installs
+# (its manifest's "file" lines), no X360 parts, plus ThirteenAG's Widescreen Fix (official release
+# "nfsmw", GPL-3.0): the Black Edition gets its widescreen from X360 Stuff, the original from this.
+say "the original game's package (jk4speed-files-nfs)"
+NFSD="$STAGE/jk4speed-files-nfs"
+mkdir -p "$NFSD/scripts"
+awk '$1 == "file" { print $2 }' "$STAGE/jk4speed-files/manifest.txt" | while read -r rel; do
+    mkdir -p "$NFSD/$(dirname "$rel")"
+    cp "$STAGE/jk4speed-files/$rel" "$NFSD/$rel"
+done
+WSF_DIR="${JK_WSF_DIR:-$HOME/nfsmw-bench/kit/widescreen/scripts}"
+for want in NFSMostWanted.WidescreenFix.asi:f3a7f8c04db295154e10987303a7237a8dc70e2ba944d38a79f895ad1f570dd1 \
+            NFSMostWanted.WidescreenFix.tpk:a66fd12ebc549c4dc8b78dbc791e622d0e9065a286d698ac81a0dd15510bf904; do
+    name=${want%%:*} sha=${want#*:}
+    cp "$WSF_DIR/$name" "$NFSD/scripts/$name"
+    got=$(sha256sum "$NFSD/scripts/$name" | cut -d' ' -f1)
+    [ "$got" = "$sha" ] || die "scripts/$name is $got, the pinned release file is $sha"
+    printf '   %s %s\n' "${got:0:16}" "jk4speed-files-nfs/scripts/$name"
+done
+tr -d '\r' < "$here/config/NFSMostWanted.WidescreenFix.ini" > "$NFSD/scripts/NFSMostWanted.WidescreenFix.ini"
+# its own config bases (read by the launcher, never installed): the Black Edition's, minus the two
+# shadow knobs made for the X360 folder, so the original decides its own shadows as on a PC
+grep -v -E '^DXVK_PS4_NFS_(SHADOW_DETAIL|SHADOWS_NV)=' "$STAGE/jk4speed-files/jk4speed.ini.base" > "$NFSD/jk4speed.ini.base"
+cp "$STAGE/jk4speed-files/nfsmw.profile.base" "$NFSD/nfsmw.profile.base"
+grep -q 'SHADOW' "$NFSD/jk4speed.ini.base" && die "the original's config base still names a shadow knob" || true
+# Other fixes from a PC install would change the game beyond the widescreen picture: Fusion Fix
+# refuses to run next to the classic fix (a hidden MessageBox), Extra Options changes the game's
+# options. PATCH moves them aside, Restore puts them back.
+printf 'scripts/NFSMostWanted.FusionFix.asi\nscripts/NFSMWExtraOptions.asi\n' > "$OUT/nfs-remove.txt"
+python3 -I "$launcher/tools/make_manifest.py" "$NFSD" --require-list "$OUT/require.txt" --remove-list "$OUT/nfs-remove.txt"
+grep -q '^file scripts/NFSMostWanted.WidescreenFix.asi ' "$NFSD/manifest.txt" || die "the original's manifest has no Widescreen Fix"
+grep -q -i 'x360\|xenon' "$NFSD/manifest.txt" && die "the original's manifest names an X360 part" || true
+
 say "sce_sys"
 bash "$launcher/tests/run.sh" make_sce_sys >/dev/null
 cp "$launcher/build/sce_sys/icon0.png" "$launcher/build/sce_sys/pic1.png" "$STAGE/sce_sys/"
@@ -152,7 +185,7 @@ SFO="$STAGE/sce_sys/param.sfo"
 "$PKGTOOL" sfo_new "$SFO" >/dev/null
 set_sfo() { "$PKGTOOL" sfo_setentry --value "$3" --type "$2" ${4:+--maxsize "$4"} "$SFO" "$1" >/dev/null; }
 set_sfo APP_TYPE integer 1
-set_sfo APP_VER utf8 01.00 8
+set_sfo APP_VER utf8 01.10 8
 set_sfo ATTRIBUTE integer 0x00010000
 set_sfo CATEGORY utf8 gd 4
 set_sfo CONTENT_ID utf8 "$CONTENT_ID" 48
@@ -163,7 +196,7 @@ set_sfo PUBTOOLVER integer 0x02890000
 set_sfo SYSTEM_VER integer 0
 set_sfo TITLE utf8 JK4SPEED 128
 set_sfo TITLE_ID utf8 "$TITLE_ID" 12
-set_sfo VERSION utf8 01.00 8
+set_sfo VERSION utf8 01.10 8
 "$PKGTOOL" sfo_listentries "$SFO" | tee "$OUT/param-sfo.txt"
 
 say "licences and player pages"
@@ -192,7 +225,7 @@ fi   # end of the stage part (JK_PKG_PHASE=pack starts here)
 [ -d "$STAGE/jk4speed-files" ] || die "no stage: run with JK_PKG_PHASE=stage first"
 
 say "release list (Official Build badge, launcher/src/jk_release.h)"
-python3 -I "$launcher/tools/make_release.py" "$STAGE" "JK4SPEED 1.0" --eboot "$OUT/reloc-build/eboot.bin"
+python3 -I "$launcher/tools/make_release.py" "$STAGE" "JK4SPEED 1.1" --eboot "$OUT/reloc-build/eboot.bin"
 REL_KEEP="${JK_RELEASE_DIR:-$HOME/jk4-build/release-sign}/jk4speed-files"
 if [ -n "${JK_RELEASE_SIG:-}" ]; then
     # the owner signed an earlier, identical release.txt (tools/sign_release.sh)
@@ -224,7 +257,7 @@ for f in "$UROOT"/sce_module/*; do
 done
 (cd "$UROOT" && find win -type f | sort) | while read -r rel; do printf '%s\t%s\n' "$rel" "$UROOT/$rel"; done >> "$LIST"
 (cd "$STAGE" && find . -type f | sed 's#^\./##' | sort) | while read -r rel; do printf '%s\t%s\n' "$rel" "$STAGE/$rel"; done >> "$LIST"
-grep -qi -E '\.(bun|bin|lzc|fx\.o|asi|tpk)\b|speed\.exe' <(cut -f1 "$LIST" | grep -v -E '^win/|^sce_module/|^eboot\.bin$|^jk4speed-files/deltas/[A-Za-z0-9_.]+\.jkd$|^jk4speed-files/xenon/(NFSMW_XenonEffects\.(asi|ini)|XenonEffects\.tpk)$') && \
+grep -qi -E '\.(bun|bin|lzc|fx\.o|asi|tpk)\b|speed\.exe' <(cut -f1 "$LIST" | grep -v -E '^win/|^sce_module/|^eboot\.bin$|^jk4speed-files/deltas/[A-Za-z0-9_.]+\.jkd$|^jk4speed-files/xenon/(NFSMW_XenonEffects\.(asi|ini)|XenonEffects\.tpk)$|^jk4speed-files-nfs/scripts/NFSMostWanted\.WidescreenFix\.(asi|tpk)$') && \
     die "a game or mod file is in the list" || true
 
 say "gp4 + pkg"

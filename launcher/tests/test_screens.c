@@ -8,6 +8,8 @@
 
 #include <stdlib.h>
 
+#define PANEL_Y_T 280                      /* PANEL_Y in jk_screens.c */
+
 static JkFrame frame_new(void)
 {
     JkFrame f = { calloc((size_t)JK_W * JK_H, 4), JK_W, JK_H, JK_W * 4 };
@@ -303,6 +305,30 @@ static void interrupted_copy_exact(void)
     CHECK(!strcmp(JK_S_H_HOME, "Home"));
 }
 
+/* M-3: the Help texts name the active game's folders and saves */
+static void help_texts_follow_the_game(void)
+{
+    char all[3][8192] = { "", "", "" };
+    for (int side = 0; side < 3; side++) {
+        JkModel m = case_base(JK_SCR_HELP, JK_ST_READY);
+        if (side) { m.ngames = 2; m.active = side - 1; }   /* 0: one game (1.0); 1: slot 0; 2: slot 1 */
+        for (int pg = 0; pg < JK_HELP_COUNT; pg++)
+            for (int i = 0; i < jk_help_count(pg); i++) {
+                strcat(all[side], jk_help_text(&m, pg, i));
+                strcat(all[side], "\n");
+            }
+    }
+    for (int side = 0; side < 2; side++) {                 /* the single game and slot 0 read as before */
+        CHECK(strstr(all[side], "/data/Jk4Speed/NFSMW/speed.exe"));
+        CHECK(strstr(all[side], "/data/Jk4Speed/Saves\n"));
+        CHECK(!strstr(all[side], "Saves-NFS"));
+    }
+    CHECK(strstr(all[2], "/data/Jk4Speed/NFS\n"));
+    CHECK(strstr(all[2], "/data/Jk4Speed/NFS/speed.exe"));
+    CHECK(strstr(all[2], "/data/Jk4Speed/Saves-NFS\n"));
+    CHECK(!strstr(all[2], "NFSMW"));
+}
+
 /* Help: four pages, each draws something different. */
 static void help_pages_draw(void)
 {
@@ -388,8 +414,90 @@ static void loader_frames_differ_and_loop(void)
     free(a.pixels); free(b.pixels);
 }
 
+static int region_same(const JkFrame *a, const JkFrame *b, int x0, int y0, int x1, int y1)
+{
+    for (int y = y0; y < y1; y++)
+        for (int x = x0; x < x1; x++)
+            if (px(a, x, y) != px(b, x, y)) return 0;
+    return 1;
+}
+
+/* 1.1: the chosen half has the accent frame; the other has none. */
+static void home_two_accent_frame_follows_active(void)
+{
+    JkFrame f = frame_new();
+    int x_left = JK_HALF_X0 + 100, x_right = JK_HALF_X0 + JK_HALF_W + JK_HALF_GAP + 100, y = JK_HALF_Y + 1;
+    JkModel m = case_two(JK_SCR_HOME, JK_ST_READY, JK_ST_READY, 0);
+    jk_screen_draw(&f, &m);
+    CHECK_EQ(px(&f, x_left, y), JK_RGB_DUSK);
+    CHECK(px(&f, x_right, y) != JK_RGB_DUSK);
+    m.active = 1;
+    jk_screen_draw(&f, &m);
+    CHECK(px(&f, x_left, y) != JK_RGB_DUSK);
+    CHECK_EQ(px(&f, x_right, y), JK_RGB_DUSK);
+    free(f.pixels);
+}
+
+/* 1.1: a side without a game is dimmed and says "copy the game here"; the other side is not touched. */
+static void home_two_dims_a_side_without_game(void)
+{
+    JkFrame a = frame_new(), b = frame_new();
+    JkModel m = case_two(JK_SCR_HOME, JK_ST_READY, JK_ST_READY, 0);
+    jk_screen_draw(&a, &m);
+    m.slot_state[1] = JK_ST_NO_GAME;
+    jk_screen_draw(&b, &m);
+    int rx = JK_HALF_X0 + JK_HALF_W + JK_HALF_GAP;
+    CHECK(region_same(&a, &b, JK_HALF_X0, JK_HALF_Y, JK_HALF_X0 + JK_HALF_W, JK_HALF_Y + JK_HALF_H));
+    CHECK(!region_same(&a, &b, rx, JK_HALF_Y, rx + JK_HALF_W, JK_HALF_Y + JK_HALF_H));
+    /* the text is there: the status line of the dimmed half has SMOKE pixels */
+    int smoke = 0;
+    for (int y = JK_HALF_Y; y < JK_HALF_Y + JK_HALF_H; y++)
+        for (int x = rx + 20; x < rx + JK_HALF_W; x++) smoke += px(&b, x, y) == JK_RGB_SMOKE;
+    CHECK(smoke > 200);
+    CHECK(strstr(JK_S_H_COPY_HERE, "COPY THE GAME HERE") != NULL);
+    free(a.pixels); free(b.pixels);
+}
+
+/* 1.1: every screen but Home names the chosen game under the badge. */
+static void header_names_the_active_game(void)
+{
+    JkFrame a = frame_new(), b = frame_new(), c = frame_new();
+    JkModel two = case_two(JK_SCR_SETTINGS, JK_ST_READY, JK_ST_READY, 0), one = two;
+    one.ngames = 0;
+    jk_screen_draw(&a, &two);
+    jk_screen_draw(&b, &one);
+    int x0 = JK_BADGE_RIGHT - 600, y0 = JK_BADGE_Y + 40, y1 = JK_BADGE_Y + 90;
+    CHECK(!region_same(&a, &b, x0, y0, JK_BADGE_RIGHT + 2, y1));
+    two.active = 1;
+    jk_screen_draw(&c, &two);
+    CHECK(!region_same(&a, &c, x0, y0, JK_BADGE_RIGHT + 2, y1));      /* the other game's name */
+    free(a.pixels); free(b.pixels); free(c.pixels);
+}
+
+/* 1.1: NFS has no mods: its Settings has no MODS row; the unknown exe is said on Patch. */
+static void nfs_screens(void)
+{
+    JkFrame a = frame_new(), b = frame_new();
+    JkModel m = case_two(JK_SCR_SETTINGS, JK_ST_READY, JK_ST_READY, 1);
+    jk_screen_draw(&a, &m);
+    m.no_mods = 0;
+    jk_screen_draw(&b, &m);
+    CHECK(!region_same(&a, &b, JK_SET_X, JK_SET_Y0 + 2 * JK_SET_STEP, JK_SET_X + 600, JK_SET_Y0 + 2 * JK_SET_STEP + JK_SET_ITEM_H));
+    m = case_two(JK_SCR_PATCH, JK_ST_READY, JK_ST_NOT_INSTALLED, 1);
+    jk_screen_draw(&a, &m);
+    m.check.exe_known = 1;
+    jk_screen_draw(&b, &m);
+    CHECK(!region_same(&a, &b, 150, PANEL_Y_T, 890, PANEL_Y_T + 300));
+    CHECK(!jk_patch_can_mods(&m));
+    free(a.pixels); free(b.pixels);
+}
+
 int main(void)
 {
+    RUN(home_two_accent_frame_follows_active);
+    RUN(home_two_dims_a_side_without_game);
+    RUN(header_names_the_active_game);
+    RUN(nfs_screens);
     RUN(safe_area_respected);
     RUN(hint_bar_present_every_screen);
     RUN(draw_deterministic);
@@ -407,6 +515,7 @@ int main(void)
     RUN(no_clean_original_text);
     RUN(interrupted_copy_exact);
     RUN(help_pages_draw);
+    RUN(help_texts_follow_the_game);
     RUN(two_folders_blocks_patch);
     RUN(failure_text_says_what_is_true);
     RUN(one_name_per_mod);

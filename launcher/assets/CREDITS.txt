@@ -68,6 +68,7 @@ N4SRazer	NFSMW HD Road Textures	https://www.nfsaddons.com/downloads/nfsmw/tools/
 xan1242 (Lovro Pleše)	Xenon Effects, MIT licence	https://github.com/xan1242/NFSMW_XenonEffects
 samuelgr	Xidi (controller to DirectInput), BSD 3-Clause	https://github.com/samuelgr/Xidi
 ThirteenAG	Ultimate ASI Loader, MIT licence	https://github.com/ThirteenAG/Ultimate-ASI-Loader
+ThirteenAG	Widescreen Fix (original game), GPL-3.0, source a13a14a	https://github.com/ThirteenAG/WidescreenFixesPack
 
 # Runtime
 DXVK	Direct3D to Vulkan (zlib licence)	https://github.com/doitsujin/dxvk

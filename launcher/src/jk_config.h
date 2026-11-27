@@ -29,6 +29,11 @@ typedef struct JkSettings { JkPace pace; int fps_hud; int logs; } JkSettings;   
 int jk_settings_load(const char *state_dir, JkSettings *out);
 /* Atomic write (the folder is made). pace is stored as 30 or 60. 0 ok. */
 int jk_settings_save(const char *state_dir, const JkSettings *s);
+/* 1.1: the game side the launcher last showed (0 NFSMW, 1 NFS), kept as
+ * "active=" in the same launcher.ini (jk_settings_save leaves it alone).
+ * Load: -1 when there is none. Save: 0 ok. */
+int jk_active_load(const char *state_dir);
+int jk_active_save(const char *state_dir, int active);
 
 typedef struct JkConfigIn {
     const char *files_dir, *game_dir, *profiles_dir, *cache_dir, *logs_dir;
@@ -53,12 +58,15 @@ typedef struct JkConfigIn {
     /* SETTINGS > CONTROLS, or NULL for the defaults: the profile's [input]
      * key binds and Xidi.ini's button lines. */
     const JkControls *controls;
+    /* 1.1: the game's profile key ("nfsmw" or "nfs"; NULL: "nfsmw"). The
+     * profile is <profiles_dir>/<key>.profile with "id = <key>". */
+    const char *profile_key;
 } JkConfigIn;
 
 /* -> <game_dir>/jk4speed-dev.ini (CRLF). 0 ok; <0 with a short reason (no
  * full paths); nothing is written when the old file's backup fails. */
 int jk_config_write_ini(const JkConfigIn *in, char *why, size_t cap);
-/* -> <profiles_dir>/nfsmw.profile (LF). 0 ok; <0 with a short reason. */
+/* -> <profiles_dir>/<profile_key>.profile (LF; default nfsmw). 0 ok; <0 with a short reason. */
 int jk_config_write_profile(const JkConfigIn *in, char *why, size_t cap);
 
 /* -> <game_dir>/Xidi.ini (0666): the package's Xidi.ini with the CustomMapper

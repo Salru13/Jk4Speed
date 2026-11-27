@@ -73,6 +73,7 @@ static void env_new(Env *e, int with_game)
         tmp_put(e->game, "GLOBAL/a.bin", "data");
         tmp_put(e->game, "CARS/x.bin", "car");
     }
+    memset(&e->p, 0, sizeof e->p);                      /* JkPaths grew in 1.1: exe_any / profile_key start off */
     e->p.game_dir = e->game; e->p.data_root = e->data; e->p.files_dir = e->pkg; e->p.profiles_dir = e->prof;
 }
 
@@ -947,8 +948,90 @@ static void package_file_corrupt_fails_cleanly(void)
     tmp_rm_rf(e.root);
 }
 
+/* 1.1: a minimal PE header (DOS stub + PE32 optional header) with the given stamp and image base. */
+static void put_pe(const char *dir, const char *rel, unsigned long stamp, unsigned long base)
+{
+    unsigned char b[512];
+    memset(b, 0, sizeof b);
+    b[0] = 'M'; b[1] = 'Z'; b[60] = 0x80;
+    memcpy(b + 0x80, "PE\0\0", 4);
+    for (int i = 0; i < 4; i++) {
+        b[0x80 + 8 + i] = (unsigned char)(stamp >> (8 * i));
+        b[0x80 + 52 + i] = (unsigned char)(base >> (8 * i));
+    }
+    b[0x80 + 24] = 0x0b; b[0x80 + 25] = 0x01;
+    char path[600];
+    snprintf(path, sizeof path, "%s/%s", dir, rel);
+    FILE *f = fopen(path, "wb");
+    if (f) { fwrite(b, 1, sizeof b, f); fclose(f); }
+}
+
+static void exe_known_stub(void)
+{
+    char d[256], p[300];
+    tmp_dir(d, sizeof d);
+    snprintf(p, sizeof p, "%s/speed.exe", d);
+    put_pe(d, "speed.exe", 0x438e4c8cul, 0x400000ul);
+    CHECK_EQ(jk_exe_is_known_v13(p), 1);
+    put_pe(d, "speed.exe", 0x438e4c8dul, 0x400000ul);
+    CHECK_EQ(jk_exe_is_known_v13(p), 0);
+    put_pe(d, "speed.exe", 0x438e4c8cul, 0x10000000ul);
+    CHECK_EQ(jk_exe_is_known_v13(p), 0);
+    CHECK_EQ(jk_exe_is_known_v13("/no/such/speed.exe"), 0);
+    tmp_rm_rf(d);
+}
+
+static void nfs_any_exe(void)
+{
+    Env e; env_new(&e, 1);
+    tmp_put(e.game, "speed.exe", "some cracked exe");
+    e.p.exe_any = 1;
+    JkCheck c;
+    jk_patch_check(&e.p, &c);
+    CHECK(c.state != JK_ST_WRONG_EXE);
+    CHECK_EQ(c.state, JK_ST_NOT_INSTALLED);
+    CHECK_EQ(c.exe_known, 0);
+    CHECK_EQ(install(&e), 0);
+    CHECK_EQ(state_of(&e), JK_ST_READY);
+    put_pe(e.game, "speed.exe", 0x438e4c8cul, 0x400000ul);   /* a v1.3 with another hash */
+    jk_patch_check(&e.p, &c);
+    CHECK_EQ(c.state, JK_ST_READY);
+    CHECK_EQ(c.exe_known, 1);
+    char p[400];                                              /* a missing exe is still no game */
+    snprintf(p, sizeof p, "%s/speed.exe", e.game);
+    jk_fs_remove(p);
+    CHECK_EQ(state_of(&e), JK_ST_NO_GAME);
+    tmp_rm_rf(e.root);
+}
+
+static void nfs_any_exe_garbage(void)
+{
+    Env e; env_new(&e, 1);
+    tmp_put(e.game, "speed.exe", "not really");
+    e.p.exe_any = 1;
+    JkCheck c;
+    CHECK_EQ(jk_patch_check(&e.p, &c), 0);
+    CHECK_EQ(c.exe_known, 0);
+    CHECK(c.state != JK_ST_WRONG_EXE && c.state != JK_ST_NO_GAME);
+    tmp_rm_rf(e.root);
+}
+
+static void be_still_locked(void)
+{
+    Env e; env_new(&e, 1);
+    tmp_put(e.game, "speed.exe", "speed exe v1.0");
+    e.p.exe_any = 0;
+    CHECK_EQ(state_of(&e), JK_ST_WRONG_EXE);
+    CHECK(install(&e) < 0);
+    tmp_rm_rf(e.root);
+}
+
 int main(void)
 {
+    RUN(exe_known_stub);
+    RUN(nfs_any_exe);
+    RUN(nfs_any_exe_garbage);
+    RUN(be_still_locked);
     RUN(no_game_folder);
     RUN(wrong_exe);
     RUN(missing_reports_first);

@@ -35,6 +35,10 @@ void jk_layout_init(JkLayout *l, const char *root)
     SET(state, l->system, "state");
     SET(cache, l->system, "cache");
     SET(profiles, l->system, "profiles");
+    SET(game_nfs, root, "NFS");
+    SET(saves_nfs, root, "Saves-NFS");
+    SET(saves_nfs_game, l->saves_nfs, "NFS Most Wanted");
+    SET(system_nfs, l->system, "nfs");
     if (!ok) memset(l, 0, sizeof *l);
 }
 
@@ -49,7 +53,11 @@ int jk_layout_make(const JkLayout *l)
      * FTP got 550 on 0755), also when an earlier launcher made them 0755 */
     const char *open_dirs[] = { l->root, l->saves, l->mods, l->logs, l->system };
     for (size_t i = 0; i < sizeof open_dirs / sizeof open_dirs[0]; i++) chmod(open_dirs[i], 0777);
-    return 0;
+    /* 1.1: the second game's folders last, so a failure here never keeps 1.01's folders from the chmod above */
+    int rc = 0;
+    if (jk_fs_mkdir_p(l->saves_nfs) != 0) rc = -1; else chmod(l->saves_nfs, 0777);
+    if (jk_fs_mkdir_p(l->system_nfs) != 0) rc = -1;
+    return rc;
 }
 
 /* Up to two matches of name (letter case ignored) among the folders in dir,
@@ -74,12 +82,17 @@ static int find_ci(const char *dir, const char *name, char m[2][256])
 
 int jk_game_dir_find(const char *root, char *out, size_t cap, char *other, size_t ocap)
 {
+    return jk_game_dir_find_leaf(root, GAME_LEAF, out, cap, other, ocap);
+}
+
+int jk_game_dir_find_leaf(const char *root, const char *leaf, char *out, size_t cap, char *other, size_t ocap)
+{
     if (other && ocap) other[0] = 0;
     if (!out || !cap) return 0;
-    snprintf(out, cap, "%s/%s", root ? root : "", GAME_LEAF);
+    snprintf(out, cap, "%s/%s", root ? root : "", leaf);
     if (!root) return 0;
     char m[2][256];
-    int n = find_ci(root, GAME_LEAF, m);
+    int n = find_ci(root, leaf, m);
     if (n == 0) return 0;
     snprintf(out, cap, "%s/%s", root, m[0]);
     if (n == 1) return 1;

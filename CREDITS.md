@@ -107,6 +107,7 @@ The lists below are copied exactly as they appear in the pack's `ReadMe.txt` (se
 | xan1242 (Lovro Pleše) | Xenon Effects (`NFSMW_XenonEffects.asi`, `.ini`, `XenonEffects.tpk`) | MIT | https://github.com/xan1242/NFSMW_XenonEffects |
 | samuelgr (Samuel Grossman) | Xidi, controller to DirectInput mapping (`Xidi.32.dll`) | BSD 3-Clause | https://github.com/samuelgr/Xidi |
 | ThirteenAG | Ultimate ASI Loader (`dinput8.dll`); also the Xidi fork build JK4SPEED uses | MIT | https://github.com/ThirteenAG/Ultimate-ASI-Loader |
+| ThirteenAG | Widescreen Fix for Most Wanted (`NFSMostWanted.WidescreenFix.asi`, `.tpk`): the original-look side's 16:9 picture | GPL-3.0 | https://github.com/ThirteenAG/WidescreenFixesPack |
 | Mark Adler | `puff.c` (zlib contrib), the model for the launcher's DEFLATE reader | zlib | https://github.com/madler/zlib |
 | Igor Pavlov | LZMA SDK format description (public domain), followed by the launcher's LZMA reader; no SDK code is included | public domain | https://www.7-zip.org/sdk.html |
 

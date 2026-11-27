@@ -59,6 +59,26 @@ static void case_saves_found(JkSavesFound *f)
     snprintf(f->rejected_name, sizeof f->rejected_name, "NOTES/NOTES");
 }
 
+/* 1.1: the same model as the host's two-game run: side `active` chosen, both halves told. */
+static JkModel case_two(JkScreenId s, JkState st0, JkState st1, int active)
+{
+    JkModel m = case_base(s, active ? st1 : st0);
+    m.ngames = 2;
+    m.active = active;
+    m.slot_state[0] = st0;
+    m.slot_state[1] = st1;
+    m.slot_label[0] = JK_S_G_BE;
+    m.slot_label[1] = JK_S_G_OG;
+    m.slot_dir[0] = JK_S_GAME_DIR;
+    m.slot_dir[1] = JK_S_GAME_DIR_NFS;
+    m.game_dir = m.slot_dir[active];
+    m.no_mods = active == 1;
+    m.exe_any = active == 1;
+    m.x360_required = active == 0;
+    m.check.has_backup = (active ? st1 : st0) == JK_ST_READY;
+    return m;
+}
+
 /* Fills out[] (at least JK_CASES_MAX entries). Returns the count. */
 static int jk_cases(JkCase *out)
 {
@@ -161,6 +181,29 @@ static int jk_cases(JkCase *out)
     m.prog_done = 3; m.prog_total = 10; strcpy(m.prog_file, "Reading NFSMWUHUD01022026b.7z");
     out[n++] = (JkCase){ "mods-installing", m };
 
+    /* 1.1 two games: the split Home, and what the other screens say about the chosen side */
+    m = case_two(JK_SCR_HOME, JK_ST_READY, JK_ST_NOT_INSTALLED, 0);
+    out[n++] = (JkCase){ "home-both", m };
+    m = case_two(JK_SCR_HOME, JK_ST_READY, JK_ST_NOT_INSTALLED, 1); m.check.exe_known = 1;
+    out[n++] = (JkCase){ "home-both-nfs-chosen", m };
+    m = case_two(JK_SCR_HOME, JK_ST_NO_GAME, JK_ST_READY, 1); m.check.exe_known = 1;
+    out[n++] = (JkCase){ "home-nfs-only", m };
+    m = case_two(JK_SCR_HOME, JK_ST_NO_GAME, JK_ST_NO_GAME, 0);
+    out[n++] = (JkCase){ "home-none", m };
+    m = case_two(JK_SCR_PATCH, JK_ST_NO_GAME, JK_ST_NO_GAME, 1);
+    out[n++] = (JkCase){ "patch-nfs-no-game", m };
+    m = case_two(JK_SCR_PATCH, JK_ST_READY, JK_ST_NOT_INSTALLED, 1);
+    out[n++] = (JkCase){ "checklist-nfs-unknown", m };
+    m = case_two(JK_SCR_PATCH, JK_ST_READY, JK_ST_NOT_INSTALLED, 1); m.check.exe_known = 1;
+    out[n++] = (JkCase){ "checklist-nfs-v13", m };
+    m = case_two(JK_SCR_SETTINGS, JK_ST_READY, JK_ST_READY, 0);
+    out[n++] = (JkCase){ "settings-be-two", m };
+    m = case_two(JK_SCR_SETTINGS, JK_ST_READY, JK_ST_READY, 1);
+    out[n++] = (JkCase){ "settings-nfs", m };
+    m = case_two(JK_SCR_PATCH, JK_ST_READY, JK_ST_READY, 1); m.phase = JK_PH_FAILED; m.fail_kind = JK_FAIL_PREFIX;
+    snprintf(m.msg, sizeof m.msg, "Can't set this game's save folder: user.reg in the prefix is missing or unreadable");
+    out[n++] = (JkCase){ "patch-nfs-failed-prefix", m };
+
     m = case_base(JK_SCR_SETTINGS, JK_ST_READY);
     out[n++] = (JkCase){ "settings-fps30", m };
     m = case_base(JK_SCR_SETTINGS, JK_ST_READY); m.pace = JK_PACE_60;
@@ -187,6 +230,8 @@ static int jk_cases(JkCase *out)
     out[n++] = (JkCase){ "saves", m };
     m = case_base(JK_SCR_SAVES, JK_ST_READY);
     out[n++] = (JkCase){ "saves-none", m };
+    m = case_two(JK_SCR_SAVES, JK_ST_READY, JK_ST_READY, 1); m.saves_profiles = 1; m.usb = 1;
+    out[n++] = (JkCase){ "saves-nfs", m };   /* 1.1: the original game's own save folder */
     m = case_base(JK_SCR_SAVES, JK_ST_READY); m.saves_profiles = 2; m.usb = 1; m.saves_state = 1;
     strcpy(m.saves_msg, "/mnt/usb0/Jk4Speed/saves/2026-11-23_2100");
     out[n++] = (JkCase){ "saves-exported", m };

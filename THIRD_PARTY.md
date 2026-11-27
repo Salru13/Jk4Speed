@@ -24,6 +24,7 @@ player from their authors.
 | Ultimate ASI Loader 10.0.2 (ThirteenAG), as `dinput8.dll` | Loads the game's `.asi` mods | MIT | `LICENSES/UltimateASILoader-LICENSE.txt` |
 | Xidi (Samuel Grossman; ThirteenAG fork build), as `Xidi.32.dll` | Maps the controller to DirectInput | BSD-3-Clause | `LICENSES/Xidi-LICENSE.txt` |
 | Xenon Effects 1.02 (xan1242): `NFSMW_XenonEffects.asi`, `.ini`, `XenonEffects.tpk` | Xbox 360 style effects | MIT | `LICENSES/XenonEffects-LICENSE.txt` |
+| Widescreen Fix (ThirteenAG, release `nfsmw`, source `a13a14a`): `NFSMostWanted.WidescreenFix.asi`, `.tpk`, original-look side only | 16:9 picture, HUD and movies | GPL-3.0 | `LICENSES/WidescreenFix-GPL-3.0.txt`, `LICENSES/WidescreenFix-SOURCE.txt` |
 | Ubuntu Sans | The launcher's font | Ubuntu Font Licence 1.0 | `LICENSES/UbuntuFont-LICENCE.txt` |
 | TweetNaCl | Checks the Official Build signature in the launcher | Public domain | in `launcher/third_party/tweetnacl` |
 | The launcher's archive decoders (DEFLATE, LZMA, 7z, ZIP, UPS, MD5) | Read the mod archives on the console | Ours (LGPL-2.1-or-later); DEFLATE follows `puff.c` (zlib licence) | `LICENSES/Decoders-NOTICE.txt` |

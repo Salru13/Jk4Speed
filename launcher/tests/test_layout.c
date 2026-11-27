@@ -59,6 +59,41 @@ static void layout_dirs_0777(void)
     tmp_rm_rf(root);
 }
 
+/* M-1: a Saves-NFS or System/nfs that cannot be made never keeps the 0777 off the 1.01 folders */
+static void layout_nfs_failure_keeps_0777(void)
+{
+    char root[256], p[600];
+    tmp_dir(root, sizeof root);
+    snprintf(p, sizeof p, "%s/Jk4Speed", root);
+    JkLayout l;
+    jk_layout_init(&l, p);
+    mkdir(p, 0755);
+    mkdir(l.saves, 0755);
+    mkdir(l.mods, 0755);
+    mkdir(l.logs, 0755);
+    mkdir(l.system, 0755);
+    tmp_put(p, "Saves-NFS", "a file in the way");
+    CHECK_EQ(jk_layout_make(&l), -1);                  /* the failure is still reported */
+    const char *dirs[] = { l.root, l.saves, l.mods, l.logs, l.system };
+    for (size_t i = 0; i < sizeof dirs / sizeof dirs[0]; i++) {
+        struct stat st;
+        CHECK(stat(dirs[i], &st) == 0 && (st.st_mode & 0777) == 0777);
+    }
+    tmp_rm_rf(root);
+    tmp_dir(root, sizeof root);
+    snprintf(p, sizeof p, "%s/Jk4Speed", root);
+    jk_layout_init(&l, p);
+    mkdir(p, 0755);
+    mkdir(l.system, 0755);
+    mkdir(l.saves, 0755);
+    tmp_put(l.system, "nfs", "a file in the way");
+    CHECK_EQ(jk_layout_make(&l), -1);
+    struct stat st;
+    CHECK(stat(l.saves, &st) == 0 && (st.st_mode & 0777) == 0777);
+    CHECK(stat(l.system, &st) == 0 && (st.st_mode & 0777) == 0777);
+    tmp_rm_rf(root);
+}
+
 static void layout_make_creates_all_but_game(void)
 {
     char root[256], p[600];
@@ -154,14 +189,61 @@ static void migrate_r3_state_aside_never_overwrites(void)
     tmp_rm_rf(root);
 }
 
+static void nfs_leaf_and_paths(void)
+{
+    char root[256], out[300], other[300];
+    tmp_dir(root, sizeof root);
+    char d[400];
+    snprintf(d, sizeof d, "%s/nfs", root); mkdir(d, 0755);
+    snprintf(d, sizeof d, "%s/NFSMW", root); mkdir(d, 0755);
+    CHECK_EQ(jk_game_dir_find_leaf(root, "NFS", out, sizeof out, other, sizeof other), 1);
+    CHECK(strstr(out, "/nfs") && !strstr(out, "NFSMW"));
+    CHECK_EQ(jk_game_dir_find_leaf(root, "NFSMW", out, sizeof out, other, sizeof other), 1);
+    CHECK(strstr(out, "/NFSMW"));
+    JkLayout l;
+    jk_layout_init(&l, "/data/Jk4Speed");
+    CHECK(!strcmp(l.game_nfs, "/data/Jk4Speed/NFS"));
+    CHECK(!strcmp(l.saves_nfs, "/data/Jk4Speed/Saves-NFS"));
+    CHECK(!strcmp(l.saves_nfs_game, "/data/Jk4Speed/Saves-NFS/NFS Most Wanted"));
+    CHECK(!strcmp(l.system_nfs, "/data/Jk4Speed/System/nfs"));
+    tmp_rm_rf(root);
+    /* make creates Saves-NFS and System/nfs */
+    tmp_dir(root, sizeof root);
+    snprintf(d, sizeof d, "%s/Jk4Speed", root);
+    jk_layout_init(&l, d);
+    CHECK_EQ(jk_layout_make(&l), 0);
+    CHECK(jk_fs_is_dir(l.saves_nfs) && jk_fs_is_dir(l.system_nfs));
+    CHECK(!jk_fs_exists(l.game_nfs));
+    tmp_rm_rf(root);
+}
+
+static void nfs_two_spellings(void)
+{
+    char root[256], out[300], other[300], d[400];
+    tmp_dir(root, sizeof root);
+    snprintf(d, sizeof d, "%s/nfs", root); mkdir(d, 0755);
+    snprintf(d, sizeof d, "%s/NFS", root); mkdir(d, 0755);
+    CHECK_EQ(jk_game_dir_find_leaf(root, "NFS", out, sizeof out, other, sizeof other), -1);
+    CHECK(out[0] && other[0] && strcmp(out, other) != 0);
+    CHECK_EQ(jk_game_dir_find_leaf(root, "nfs", out, sizeof out, other, sizeof other), -1);
+    tmp_rm_rf(root);
+    tmp_dir(root, sizeof root);
+    CHECK_EQ(jk_game_dir_find_leaf(root, "NFS", out, sizeof out, other, sizeof other), 0);
+    CHECK(strstr(out, "/NFS"));
+    tmp_rm_rf(root);
+}
+
 int main(void)
 {
     RUN(layout_default_paths);
     RUN(layout_make_creates_all_but_game);
     RUN(layout_dirs_0777);
+    RUN(layout_nfs_failure_keeps_0777);
     RUN(game_dir_found_any_case);
     RUN(game_dir_two_spellings_reported);
     RUN(game_dir_missing);
+    RUN(nfs_leaf_and_paths);
+    RUN(nfs_two_spellings);
     RUN(migrate_r3_state_aside_never_overwrites);
     return jk_test_report("test_layout");
 }

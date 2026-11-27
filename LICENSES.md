@@ -16,6 +16,7 @@ Credits are in [CREDITS.md](CREDITS.md).
 | Xenon Effects 1.02, xan1242 (Lovro Pleše) | `jk4speed-files/xenon/` (`NFSMW_XenonEffects.asi`, `.ini`, `XenonEffects.tpk`) | MIT | [below](#xenon-effects-mit) |
 | Ultimate ASI Loader 10.0.2, ThirteenAG | `jk4speed-files/dinput8.dll` | MIT | [below](#ultimate-asi-loader-mit) |
 | Xidi (ThirteenAG fork build `085d7c09`), Samuel Grossman | `jk4speed-files/Xidi.32.dll` | BSD 3-Clause | [below](#xidi-bsd-3-clause) |
+| Widescreen Fix (release `nfsmw`, source `a13a14a`), ThirteenAG; original-look side only | `jk4speed-files-nfs/scripts/NFSMostWanted.WidescreenFix.asi`, `.tpk` (unmodified) | GPL-3.0 | [below](#widescreen-fix-gpl-30) |
 | Launcher DEFLATE reader, modelled on `puff.c` by Mark Adler | inside `eboot.bin` | zlib (for the puff.c structure); our code LGPL-2.1-or-later | [zlib licence](https://zlib.net/zlib_license.html) |
 | Ubuntu Sans font (launcher text) | inside `eboot.bin` | Ubuntu Font Licence 1.0 | [UFL 1.0](https://ubuntu.com/legal/font-licence) |
 
@@ -32,6 +33,7 @@ The full licence texts, one file each, are in [LICENSES/](LICENSES/):
 | `Native-DXVK.txt` | Our changes in Native DXVK |
 | `UltimateASILoader-LICENSE.txt` | Ultimate ASI Loader |
 | `Xidi-LICENSE.txt` | Xidi |
+| `WidescreenFix-GPL-3.0.txt`, `WidescreenFix-SOURCE.txt` | Widescreen Fix (licence, and where its source is) |
 | `XenonEffects-LICENSE.txt` | Xenon Effects |
 | `UbuntuFont-LICENCE.txt` | Ubuntu Sans font |
 | `Decoders-NOTICE.txt` | The launcher's archive decoders (DEFLATE, LZMA) |
@@ -143,6 +145,17 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ```
 
 Source: https://github.com/samuelgr/Xidi
+
+### Widescreen Fix (GPL-3.0)
+
+ThirteenAG's Widescreen Fix for Most Wanted, shipped unmodified for the original-look side from the official release
+`nfsmw` (`NFSMostWanted.WidescreenFix.zip`, sha256 `7be912197ac19134d5a64dfe61225e4ef85d612c4f64b96045727c3bf6735df4`):
+`NFSMostWanted.WidescreenFix.asi` (sha256 `f3a7f8c04db295154e10987303a7237a8dc70e2ba944d38a79f895ad1f570dd1`) and
+`NFSMostWanted.WidescreenFix.tpk` (sha256 `a66fd12ebc549c4dc8b78dbc791e622d0e9065a286d698ac81a0dd15510bf904`).
+Licence: GNU General Public License v3.0, full text in `LICENSES/WidescreenFix-GPL-3.0.txt`. The `.ini` next to it
+is JK4SPEED's own settings file.
+
+Source: https://github.com/ThirteenAG/WidescreenFixesPack/tree/a13a14a4b8f171a0b121d1c03d7b3b2f86a8293f/source/NFSMostWanted.WidescreenFix
 
 ### DXVK (zlib/libpng)
 

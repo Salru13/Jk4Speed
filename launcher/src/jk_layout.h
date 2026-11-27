@@ -4,7 +4,7 @@
  * The folder layout under /data/Jk4Speed (launcher r4), the same shape as the
  * JkFlow launcher's:
  *
- *   NFSMW/  Saves/  Mods/  Logs/ (+support)  devtools/
+ *   NFSMW/  NFS/  Saves/  Saves-NFS/  Mods/  Logs/ (+support)  devtools/
  *   System/{prefix,backup,modset,state,cache,profiles}
  *
  * The launcher's own data_root is System. r3 left logs/modset/state/backup/
@@ -20,6 +20,8 @@
 typedef struct JkLayout {
     char root[64], game[128], saves[96], saves_game[128], mods[96], logs[96], support[112], devtools[96],
          system[96], prefix[112], backup[112], pristine[128], modset[112], state[112], cache[112], profiles[112];
+    /* 1.1: the second game (original NFS Most Wanted) */
+    char game_nfs[128], saves_nfs[96], saves_nfs_game[128], system_nfs[112];
 } JkLayout;
 
 /* root NULL: JK_PRODUCT_ROOT. game = <root>/NFSMW until jk_game_dir_find
@@ -33,6 +35,8 @@ int jk_layout_make(const JkLayout *l);
  * 1: found (out). 0: none (out = <root>/NFSMW). -1: two or more spellings
  * (out and other name the first two, in strcmp order). */
 int jk_game_dir_find(const char *root, char *out, size_t cap, char *other, size_t ocap);
+/* The same for any folder name (leaf), e.g. "NFS" for the original game. */
+int jk_game_dir_find_leaf(const char *root, const char *leaf, char *out, size_t cap, char *other, size_t ocap);
 
 typedef void (*JkLayoutLog)(void *ctx, const char *line);
 

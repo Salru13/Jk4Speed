@@ -13,7 +13,10 @@ deny() {  # deny <what> <grep -E pattern> [flags]
     hits=$(grep -rnE ${3:-} "$2" "$src" || true)
     if [ -n "$hits" ]; then echo "  FAIL $1:"; echo "$hits" | sed 's/^/    /'; fail=1; fi
 }
-deny "publisher or series name" 'Need for Speed|Electronic Arts|EA Games|Black Box|Rockport' -i
+# 1.1: one exception, the registry path the game reads (jk_prefix.c GAME_KEY, never shown to the player)
+hits=$(grep -rnEi 'Need for Speed|Electronic Arts|EA Games|Black Box|Rockport' "$src" \
+       | grep -v '^[^:]*/jk_prefix\.c:[0-9]*:static const char GAME_KEY\[\] = .*/\* registry-path \*/$' || true)
+if [ -n "$hits" ]; then echo "  FAIL publisher or series name:"; echo "$hits" | sed 's/^/    /'; fail=1; fi
 deny "environment switch" 'getenv|secure_getenv|environ\b'
 deny "developer mode" 'dev[ _-]?mode|maintenance|debug menu|cheat|hidden menu' -i
 deny "marker or switch file" '\.marker|dev\.txt|test[-_]mode' -i

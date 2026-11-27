@@ -1,49 +1,67 @@
 # JK4SPEED player guide
 
-JK4SPEED runs your own copy of Need for Speed Most Wanted (PC, v1.3 Black Edition) on a PS4. It is an unofficial fan project. The game is not included: you need your own copy. Official page: github.com/Salru13/Jk4Speed
+JK4SPEED runs your own copy of Need for Speed Most Wanted (PC) on a PS4. It is an unofficial fan project. The game is not included: you need your own copy. Official page: github.com/Salru13/Jk4Speed
 
-## Where everything goes
+## Two games, one launcher
 
-```
-/data/Jk4Speed/                          <- made by JK4SPEED at its first start (capital J and S)
-├── NFSMW/                               <- your game: PC v1.3 Black Edition
-│   ├── speed.exe                        <- directly in NFSMW, not in a folder inside it
-│   └── (all the other game files and folders)
-└── Mods/                                <- the mod downloads, STILL ZIPPED (do not unpack)
-    ├── Complex_Installation-...-001.zip <- Xbox 360 Stuff Pack (required), every part
-    ├── NFSMWUHUD01022026b.7z            <- Upscaled HUD (optional)
-    └── nfsmw-hd-road-textures.zip       <- HD Road Textures (optional)
-```
+The Home screen is split in two. **Left / right** on the D-pad picks a side; **PLAY**, **PATCH** and **SETTINGS** work for the side you picked. **About** is shared.
 
-1. **Install the PKG** with GoldHEN's package installer (or your usual homebrew PKG installer).
-2. **Open JK4SPEED once.** The first start shows **SETTING UP JK4SPEED** for a minute or two: it sets up the
-   Windows files and makes `/data/Jk4Speed/` with `Mods`, `Saves` and `Logs`. When you see the Home screen, close
-   JK4SPEED. Do not make these folders yourself: the names are case-sensitive (`Jk4Speed`, `Mods`).
-3. **Copy your game** (PC v1.3 Black Edition, untouched) into `/data/Jk4Speed/NFSMW`, over FTP or from a USB drive.
-   `speed.exe` must be directly in `NFSMW`.
-4. **Copy the mod downloads, still zipped,** into `/data/Jk4Speed/Mods` (over FTP: file names without spaces).
-5. **Open JK4SPEED, press PATCH, then PLAY.** The first PATCH takes **about 5 minutes**. The progress bar can stay at 0 for several minutes while JK4SPEED saves your original files, reads the mod zips and builds the mod files; the text above the bar shows what it is doing. This is normal: do not close JK4SPEED or turn off the PS4.
+| | Left: **MOST WANTED · BLACK EDITION** | Right: **MOST WANTED · ORIGINAL** |
+|---|---|---|
+| Look | The Xbox 360 look | The original PC look, in 16:9 widescreen and 1080p |
+| Game folder | `/data/Jk4Speed/NFSMW` | `/data/Jk4Speed/NFS` |
+| Your copy | PC **v1.3 Black Edition** | PC **Black Edition or regular edition**, best on v1.3 |
+| Mod downloads | Xbox 360 Stuff Pack (required); Upscaled HUD and HD Road Textures (optional) | **None** |
+| Saves | `/data/Jk4Speed/Saves` | `/data/Jk4Speed/Saves-NFS` |
+
+Each side keeps its own files, settings and saves. Use one side or both, even with the same PC copy in both folders.
+
+On the right side JK4SPEED adds only its runtime files and ThirteenAG's Widescreen Fix (included in the package): 16:9 picture, HUD and movies placed for 16:9, and 1920x1080 from the first start. It changes no colours, roads or shadows: you get the game as it looks on PC. With the v1.3 `speed.exe` the 30/60 frame pacer is on; another `speed.exe` starts too, without it ("Unknown speed.exe"). A disc copy still protected by SafeDisc does not start on the console.
 
 ## Before you start
 
 - A PS4 with GoldHEN (the homebrew enabler) running.
 - A way to copy files to the PS4: FTP (GoldHEN has an FTP server), or a USB drive.
-- Your own Most Wanted PC folder, version 1.3 Black Edition. Other versions are not supported.
+- Your own Most Wanted PC folder: v1.3 Black Edition for the left side; Black Edition or regular edition for the right side.
+
+## Where everything goes
+
+```
+/data/Jk4Speed/                          <- made by JK4SPEED at its first start (capital J and S)
+├── NFSMW/                               <- LEFT side: PC v1.3 Black Edition (Xbox 360 look)
+│   ├── speed.exe                        <- directly in NFSMW, not in a folder inside it
+│   └── (all the other game files and folders)
+├── NFS/                                 <- RIGHT side: original look (Black Edition or regular edition)
+│   ├── speed.exe                        <- directly in NFS, not in a folder inside it
+│   └── (all the other game files and folders)
+├── Mods/                                <- left side only: the mod downloads, STILL ZIPPED (do not unpack)
+│   ├── Complex_Installation-...-001.zip <- Xbox 360 Stuff Pack (required for the left side), every part
+│   ├── NFSMWUHUD01022026b.7z            <- Upscaled HUD (optional)
+│   └── nfsmw-hd-road-textures.zip       <- HD Road Textures (optional)
+├── Saves/                               <- left side saves (made by JK4SPEED)
+└── Saves-NFS/                           <- right side saves (made by JK4SPEED)
+```
 
 ## Install
 
 1. **Install the PKG** with GoldHEN's package installer (or your usual homebrew PKG installer).
 2. **Open JK4SPEED once.** The first start shows **SETTING UP JK4SPEED** for a minute or two: it sets up the
-   Windows files and makes `/data/Jk4Speed/` with `Mods`, `Saves` and `Logs`. When you see the Home screen, close
-   JK4SPEED. Do not make these folders yourself: the names are case-sensitive (`Jk4Speed`, `Mods`).
-3. **Copy your game** (PC v1.3 Black Edition, untouched) into `/data/Jk4Speed/NFSMW`, over FTP or from a USB drive.
-   `speed.exe` must be directly in `NFSMW`.
-4. **Copy the mod downloads, still zipped,** into `/data/Jk4Speed/Mods` (over FTP: file names without spaces).
-5. **Open JK4SPEED, press PATCH, then PLAY.** The first PATCH takes **about 5 minutes**. The progress bar can stay at 0 for several minutes while JK4SPEED saves your original files, reads the mod zips and builds the mod files; the text above the bar shows what it is doing. This is normal: do not close JK4SPEED or turn off the PS4.
+   Windows files and makes `/data/Jk4Speed/` with `Mods`, `Saves`, `Saves-NFS` and `Logs`. When you see the Home
+   screen, close JK4SPEED. Do not make these folders yourself: the names are case-sensitive (`Jk4Speed`, `Mods`).
+3. **Copy your game**, over FTP or from a USB drive. `speed.exe` must be directly in the folder:
+   - **Xbox 360 look (left):** PC v1.3 Black Edition, untouched, into `/data/Jk4Speed/NFSMW`. Then copy the mod
+     downloads, still zipped, into `/data/Jk4Speed/Mods` (over FTP: file names without spaces).
+   - **Original look (right):** your PC Most Wanted (Black Edition or regular edition) into `/data/Jk4Speed/NFS`.
+     No mods needed.
+4. **Open JK4SPEED, pick the side with left / right, press PATCH, then PLAY.**
+   - Left side: the first PATCH takes **about 5 minutes**. The progress bar can stay at 0 for several minutes while
+     JK4SPEED saves your original files, reads the mod zips and builds the mod files; the text above the bar shows
+     what it is doing. This is normal: do not close JK4SPEED or turn off the PS4.
+   - Right side: PATCH takes seconds.
 
 ## Patch
 
-Patch installs the Jk4Speed files and the mods you turned on. The first Patch also:
+Patch works on the side you picked. On the left side it installs the Jk4Speed files and the mods you turned on. On the right side it installs the Jk4Speed files and the Widescreen Fix, and moves aside fixes from a PC install that would change the game beyond the widescreen picture (an older Widescreen Fix, Fusion Fix, Extra Options); Restore puts them back. The first Patch also:
 
 - keeps an unchanged copy of the game files it manages, so a mod can always be turned off again;
 - builds the Wine prefix the game runs in.
@@ -61,9 +79,9 @@ Choose it in **Settings > Frame rate**:
 - **30 FPS** (default): races run at an even 30 frames per second. The smoothest.
 - **60 FPS**: races run at up to 60 frames per second, less even.
 
-## Mods
+## Mods (left side only)
 
-Mods are not part of Jk4Speed. Download each one from its author's page (Settings > Mods shows where, and `MODS.md` lists them) and put the downloads, unchanged and still zipped, in one of these folders:
+The right side (original look) uses no mods. Mods are not part of Jk4Speed. Download each one from its author's page (Settings > Mods shows where, and `MODS.md` lists them) and put the downloads, unchanged and still zipped, in one of these folders:
 
 ```
 /data/Jk4Speed/Mods
@@ -90,16 +108,19 @@ One button per function. Options, the sticks and the D-pad are fixed.
 
 ## Saves
 
-Your saves are in this folder, one folder per profile inside `NFS Most Wanted`:
+Each side has its own save folder, one folder per profile inside `NFS Most Wanted`:
 
 ```
-/data/Jk4Speed/Saves
+/data/Jk4Speed/Saves        (left: Black Edition)
+/data/Jk4Speed/Saves-NFS    (right: original look)
 ```
+
+Settings > Save games shows the folder of the side you picked, and Import, Export and Player name work on that side only.
 
 - **From a PC:** copy `Documents\NFS Most Wanted` to `USB:/Jk4Speed/saves/`, then open **Settings > Save games** and press the square button **Import**. Your current saves are backed up first.
 - **To a PC:** **Settings > Save games**, cross button **Export to USB**. The copy goes to `USB:/Jk4Speed/saves/<date>/`.
 
-Saves from v1.3 Black Edition work. Saves made with other mods (extra cars, for example) may not load. More: [docs/save-games.md](docs/save-games.md).
+Saves from a PC v1.3 install work. Saves made with other mods (extra cars, for example) may not load. More: [docs/save-games.md](docs/save-games.md).
 
 ## Show FPS / ms
 
@@ -107,13 +128,13 @@ Saves from v1.3 Black Edition work. Saves made with other mods (extra cars, for 
 
 ## Logs and the support bundle
 
-- **Settings > Logs & Support > Enable logs** writes game logs to `/data/Jk4Speed/Logs` while you play. It is off by default. Turn it on only when something goes wrong.
+- **Settings > Logs & Support > Enable logs** writes game logs to `/data/Jk4Speed/Logs` while you play. It is off by default. Turn it on only when something goes wrong. (In 1.00 and 1.01 the game did not start while logs were on; fixed in 1.10.)
 - **Clear logs** deletes the game logs and the support bundles in `/data/Jk4Speed/Logs`. Your saves and settings stay.
 - **Save support bundle** collects the logs of the last runs and your settings into one folder in `/data/Jk4Speed/Logs`. It holds no saves and no personal data. With a USB drive plugged in, it is copied there too.
 
 ## Your data
 
-Everything Jk4Speed keeps is in `/data/Jk4Speed`: your game (`NFSMW`), your saves (`Saves`), the mod downloads (`Mods`), the logs (`Logs`) and the app's own folder (`System`: leave it alone; Restore uses it).
+Everything Jk4Speed keeps is in `/data/Jk4Speed`: your games (`NFSMW`, and `NFS` for the original), your saves (`Saves`, and `Saves-NFS`), the mod downloads (`Mods`), the logs (`Logs`) and the app's own folder (`System`: leave it alone; Restore uses it).
 
 - Uninstalling, reinstalling or updating the JK4SPEED package does not touch `/data/Jk4Speed`: your game, saves and settings stay.
 - Deleting `/data/Jk4Speed` deletes your saves too. Export them first.

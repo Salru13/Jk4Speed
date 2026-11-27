@@ -1,0 +1,12 @@
+NFSMostWanted.WidescreenFix.asi and NFSMostWanted.WidescreenFix.tpk (jk4speed-files-nfs/scripts/)
+are ThirteenAG's Widescreen Fix for Need for Speed: Most Wanted, unmodified, from the official
+release "nfsmw" asset NFSMostWanted.WidescreenFix.zip
+(sha256 7be912197ac19134d5a64dfe61225e4ef85d612c4f64b96045727c3bf6735df4):
+  NFSMostWanted.WidescreenFix.asi  sha256 f3a7f8c04db295154e10987303a7237a8dc70e2ba944d38a79f895ad1f570dd1
+  NFSMostWanted.WidescreenFix.tpk  sha256 a66fd12ebc549c4dc8b78dbc791e622d0e9065a286d698ac81a0dd15510bf904
+
+Licence: GNU General Public License v3.0 (WidescreenFix-GPL-3.0.txt).
+Corresponding source: https://github.com/ThirteenAG/WidescreenFixesPack/tree/a13a14a4b8f171a0b121d1c03d7b3b2f86a8293f/source/NFSMostWanted.WidescreenFix
+Release: https://github.com/ThirteenAG/WidescreenFixesPack/releases/tag/nfsmw
+
+NFSMostWanted.WidescreenFix.ini is JK4SPEED's own settings file for it (only the widescreen picture on).

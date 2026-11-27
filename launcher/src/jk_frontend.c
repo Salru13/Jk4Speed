@@ -7,6 +7,7 @@
 #include "jk_config.h"
 #include "jk_fs.h"
 #include "jk_modset.h"
+#include "jk_prefix.h"
 #include "jk_saves.h"
 #include "jk_seed.h"
 #include "jk_strings.h"
@@ -47,8 +48,32 @@ static void event(JkApp *a, const char *fmt, const char *x, const char *y)
 
 static JkPaths paths_of(const JkApp *a)
 {
-    JkPaths p = { a->s->game_dir, a->s->data_root, a->s->files_dir, a->s->profiles_dir, a->s->override_dir };
+    JkPaths p = { a->s->game_dir, a->s->data_root, a->slot && a->slot->files_dir ? a->slot->files_dir : a->s->files_dir,
+                  a->s->profiles_dir, a->s->override_dir, a->slot ? a->slot->exe_any : 0, a->slot ? a->slot->key : NULL };
     return p;
+}
+
+/* 1.1: the paths of side i (for the Home halves), as paths_of() gives them for the active one. */
+static JkPaths slot_paths(const JkApp *a, int i)
+{
+    const JkGameSlot *g = &a->src->games[i];
+    JkPaths p = { g->game_dir, g->data_root, g->files_dir ? g->files_dir : a->src->files_dir, a->src->profiles_dir,
+                  a->src->override_dir, g->exe_any, g->key };
+    return p;
+}
+
+static int has_mods(const JkApp *a) { return !a->slot || a->slot->mods; }
+
+static const char *prefix_root(const JkApp *a)
+{
+    return a->s->shared_root ? a->s->shared_root : a->s->data_root;
+}
+
+/* 1.1: <games[i].data_root>/state, or the single game's state folder. */
+static int state_dir_of(const JkApp *a, int i, char *out, size_t cap)
+{
+    const char *root = a->src && a->src->ngames >= 2 ? a->src->games[i].data_root : a->s->data_root;
+    return root ? jk_fs_join(out, cap, root, "state") : -1;
 }
 
 /* r4: the launcher's settings, <data_root>/state/launcher.ini. */
@@ -78,11 +103,18 @@ static void compose(JkApp *a)
     JkConfigIn in = { 0 };
     /* r5: the owner's test file /data/Jk4Speed/jk4speed-user.ini (keys win over the base) */
     in.user_ini = !a->s->prod && a->s->product_root && jk_fs_join(user, sizeof user, a->s->product_root, "jk4speed-user.ini") == 0 ? user : NULL;
-    in.files_dir = a->s->files_dir;
+    /* 1.1: a side whose package folder has its own config base composes from it (the original:
+     * no X360 shadow knobs); otherwise the shared one */
+    char own_base[1024];
+    int own = a->slot && a->slot->files_dir
+              && jk_fs_join(own_base, sizeof own_base, a->slot->files_dir, "jk4speed.ini.base") == 0 && jk_fs_exists(own_base);
+    in.files_dir = own ? a->slot->files_dir : a->s->files_dir;
     in.game_dir = a->s->game_dir;
     in.profiles_dir = a->s->profiles_dir;
+    in.profile_key = a->slot ? a->slot->key : NULL;
     in.set = a->set;
     in.cache_dir = jk_fs_join(cache, sizeof cache, a->s->data_root, "cache") == 0 ? cache : NULL;
+    if (a->slot && in.cache_dir) jk_fs_mkdir_p(in.cache_dir);          /* each game's own shader cache folder */
     in.logs_dir = a->s->logs_dir;
     if (!in.logs_dir && a->s->product_root && jk_fs_join(logs, sizeof logs, a->s->product_root, "Logs") == 0) in.logs_dir = logs;
     in.devtools = !a->s->prod && a->s->product_root && jk_fs_join(flag, sizeof flag, a->s->product_root, "devtools/enable") == 0
@@ -97,6 +129,14 @@ static void compose(JkApp *a)
     in.controls = &ctl;
     if (a->s->profiles_dir && jk_config_write_profile(&in, why, sizeof why) < 0)
         event(a, "config: profile not written: %s", why, NULL);
+    else if (a->s->profiles_dir && a->slot && strcmp(a->slot->key, "nfsmw")) {
+        /* 1.1: a runtime that keeps profiles.lst only starts listed profiles (the
+         * package's nfsmw.profile is listed by PATCH): list <key>.profile too. */
+        char name[64];
+        JkPaths p = paths_of(a);
+        snprintf(name, sizeof name, "%s.profile", a->slot->key);
+        if (jk_profiles_list_ensure(&p, name) < 0) event(a, "config: %s not listed in profiles.lst", name, NULL);
+    }
     if (jk_config_write_xidi(&in, why, sizeof why) < 0) event(a, "config: Xidi.ini not written: %s", why, NULL);
 }
 
@@ -127,15 +167,30 @@ static int seed_paths(const JkApp *a, char *seed, char *app, char *prefix, size_
     return 0;
 }
 
+/* Slot 1 only: the marker is there but the prefix cannot carry this game's saves folder (no
+ * user.reg, or PLAY found its Personal lines unusable). Slot 0 is 1.01's: user.reg is never looked at. */
+static int prefix_damaged(const JkApp *a, const char *prefix)
+{
+    char reg[1100];
+    if (!a->slot || a->active != 1) return 0;
+    return a->prefix_bad || jk_fs_join(reg, sizeof reg, prefix, "user.reg") < 0 || !jk_fs_exists(reg);
+}
+
 /* -1 the package has no seed; 1 the prefix is complete; 0 PATCH must seed it. */
 static int seed_state(const JkApp *a)
 {
     char seed[1024], app[1024], prefix[1024];
-    return seed_paths(a, seed, app, prefix, sizeof seed) < 0 ? -1 : jk_seed_state(seed, prefix);
+    if (seed_paths(a, seed, app, prefix, sizeof seed) < 0) return -1;
+    int r = jk_seed_state(seed, prefix);
+    return r == 1 && prefix_damaged(a, prefix) ? 0 : r;
 }
 
 /* The patcher's check, and "Patch needed" (UPDATE) while our files are in
  * place but the Wine prefix is not: PLAY then opens Patch. */
+static void refresh_slots(JkApp *a);
+static void apply_slot(JkApp *a, int i);
+static void open_mods(JkApp *a);
+
 static void check_now(JkApp *a)
 {
     JkPaths p = paths_of(a);
@@ -146,10 +201,28 @@ static void check_now(JkApp *a)
     if (a->m.check.state == JK_ST_READY && !a->m.check.has_backup) a->m.check.state = JK_ST_UPDATE;
     /* a journal of this folder waits (never looked at with two folders) */
     int was = a->pending;
-    a->pending = jk_two_folders(&a->m) ? JK_MS_PEND_NONE : jk_modset_pending(&p);
+    a->pending = jk_two_folders(&a->m) || !has_mods(a) ? JK_MS_PEND_NONE : jk_modset_pending(&p);
     if (a->pending && !was && !a->pending_why[0])
         snprintf(a->pending_why, sizeof a->pending_why, "%s", a->pending == JK_MS_PEND_DAMAGED ? JK_S_E_JOURNAL : JK_S_E_ROLLBACK);
     if (!a->pending) a->pending_why[0] = 0;
+    refresh_slots(a);
+}
+
+/* 1.1: each side's readiness for the Home halves (the active side is what check_now just found). */
+static void refresh_slots(JkApp *a)
+{
+    a->m.ngames = a->src && a->src->ngames >= 2 ? 2 : 0;
+    if (!a->m.ngames) return;
+    for (int i = 0; i < 2; i++) {
+        a->m.slot_label[i] = a->src->games[i].label;
+        a->m.slot_dir[i] = a->src->games[i].game_dir;
+        if (i == a->active) { a->m.slot_state[i] = a->m.check.state; continue; }
+        JkPaths p = slot_paths(a, i);
+        JkCheck c;
+        jk_patch_check(&p, &c);
+        if (c.state == JK_ST_READY && !c.has_backup) c.state = JK_ST_UPDATE;
+        a->m.slot_state[i] = c.state;
+    }
 }
 
 /* Patch FAILED for a journal that waits: what it was, and the way out. */
@@ -332,12 +405,81 @@ static void open_help(JkApp *a, int page)
     a->m.help_page = page;
 }
 
+/* The interrupted-PATCH journal of the game with mods, and the required pack (r5). */
+static void open_mods(JkApp *a)
+{
+    const JkServices *s = a->s;
+    if (!has_mods(a)) return;
+    if (jk_two_folders(&a->m)) {
+        event(a, "mods: recover not run (two game folders)", NULL, NULL);   /* no guessing which folder a journal is for */
+        return;
+    }
+    JkPaths p = paths_of(a);
+    char why[300] = "";
+    int r = s->game_dir && s->data_root ? jk_modset_recover(&p, why, sizeof why) : 0;
+    a->mods_recover = r;                          /* for the "Patch was interrupted" note (Task 5) */
+    if (r == 1) event(a, "mods: an interrupted PATCH was rolled back", NULL, NULL);
+    if (r == 2) event(a, "mods: an interrupted PATCH was finished", NULL, NULL);
+    if (r == JK_MS_OTHER_FOLDER) event(a, "mods: %s", why, NULL);
+    if (r < 0) {
+        event(a, "mods: %s", why, NULL);
+        snprintf(a->pending_why, sizeof a->pending_why, "%s", why);   /* said on Patch FAILED */
+    }
+    if (s->require_x360 && s->data_root) {                         /* r5: the pack is required */
+        int on = jk_modset_choice(&p);
+        if (!(on & JK_MS_BIT(JK_MOD_X)) && jk_modset_set_choice(&p, on | JK_MS_BIT(JK_MOD_X)) == 0)
+            event(a, "mods: Xbox 360 Stuff Pack is required: turned ON", NULL, NULL);
+    }
+}
+
 int jk_app_init(JkApp *a, const JkServices *s, JkFrame *frame)
 {
     if (!a || !s) return -1;
     memset(a, 0, sizeof *a);
     a->s = s;
+    a->src = s;
     a->frame = frame;
+    int mods_opened = 0;                               /* two sides: both journals were looked at above */
+    if (s->ngames >= 2) {                              /* 1.1: pick the side to open on, then act as for the only game */
+        char sd[1024];
+        int want = state_dir_of(a, 0, sd, sizeof sd) == 0 ? jk_active_load(sd) : -1;
+        int has[2];
+        for (int i = 0; i < 2; i++) {
+            JkPaths p = slot_paths(a, i);
+            JkCheck c;
+            jk_patch_check(&p, &c);
+            has[i] = c.state != JK_ST_NO_GAME;
+        }
+        int chosen = want >= 0 && has[want] ? want : has[0] ? 0 : has[1] ? 1 : 0;
+        /* both sides' mod journals are recovered at the open, whichever side was remembered; a side
+         * whose PATCH was cut off (or whose journal cannot be undone) is the one opened, so its
+         * note is shown as in 1.01 */
+        int rec[2] = { 0, 0 }, final = chosen;
+        char why[2][300] = { "", "" };
+        for (int i = 0; i < 2; i++) {
+            if (!has[i]) continue;
+            apply_slot(a, i);
+            a->mods_recover = 0;
+            a->pending_why[0] = 0;
+            open_mods(a);
+            rec[i] = a->mods_recover;
+            snprintf(why[i], sizeof why[i], "%s", a->pending_why);
+            if (i != chosen && (rec[i] == 1 || rec[i] < 0) && (rec[chosen] != 1 && rec[chosen] >= 0)) final = i;
+        }
+        apply_slot(a, final);
+        a->mods_recover = rec[final];
+        snprintf(a->pending_why, sizeof a->pending_why, "%s", why[final]);
+        mods_opened = 1;
+        s = a->s;
+        for (int i = 0; i < 2; i++)
+            if (s->games[i].saves_dir && jk_saves_recover(s->games[i].saves_dir)) event(a, "saves: an interrupted import was put right", NULL, NULL);
+        if (s->games[0].saves_dir && s->old_saves_dir && state_dir_of(a, 0, sd, sizeof sd) == 0) {   /* the r3 copy is the first game's */
+            char note[200] = "";
+            int r = jk_saves_migrate_once(s->old_saves_dir, s->games[0].saves_dir, sd, note, sizeof note);
+            event(a, r < 0 ? "saves: r3 copy failed: %s" : "saves: r3 copy: %s", note[0] ? note : "no state folder", NULL);
+        }
+        a->view.old_saves_dir = NULL;
+    }
     a->m.build_id = s->build_id;
     a->m.x360_required = s->require_x360;
     a->m.failure = s->start_failure;
@@ -359,26 +501,7 @@ int jk_app_init(JkApp *a, const JkServices *s, JkFrame *frame)
     }
     a->m.game_dir = s->game_dir;
     a->m.game_other = s->game_dir_other && s->game_dir_other[0] ? s->game_dir_other : NULL;
-    if (jk_two_folders(&a->m)) {
-        event(a, "mods: recover not run (two game folders)", NULL, NULL);   /* no guessing which folder a journal is for */
-    } else {
-        JkPaths p = paths_of(a);
-        char why[300] = "";
-        int r = s->game_dir && s->data_root ? jk_modset_recover(&p, why, sizeof why) : 0;
-        a->mods_recover = r;                          /* for the "Patch was interrupted" note (Task 5) */
-        if (r == 1) event(a, "mods: an interrupted PATCH was rolled back", NULL, NULL);
-        if (r == 2) event(a, "mods: an interrupted PATCH was finished", NULL, NULL);
-        if (r == JK_MS_OTHER_FOLDER) event(a, "mods: %s", why, NULL);
-        if (r < 0) {
-            event(a, "mods: %s", why, NULL);
-            snprintf(a->pending_why, sizeof a->pending_why, "%s", why);   /* said on Patch FAILED */
-        }
-        if (s->require_x360 && s->data_root) {                         /* r5: the pack is required */
-            int on = jk_modset_choice(&p);
-            if (!(on & JK_MS_BIT(JK_MOD_X)) && jk_modset_set_choice(&p, on | JK_MS_BIT(JK_MOD_X)) == 0)
-                event(a, "mods: Xbox 360 Stuff Pack is required: turned ON", NULL, NULL);
-        }
-    }
+    if (!mods_opened) open_mods(a);
     recheck(a);
     a->m.fps_hud = a->set.fps_hud;
     a->m.logs_on = a->set.logs;
@@ -422,13 +545,33 @@ static void log_free(JkApp *a)
 static int seed_prefix(JkApp *a, char *why, size_t cap)
 {
     char seed[1024], app[1024], prefix[1024];
-    if (seed_paths(a, seed, app, prefix, sizeof seed) < 0 || jk_seed_state(seed, prefix) != 0) return 0;
+    if (seed_paths(a, seed, app, prefix, sizeof seed) < 0) return 0;
+    int st = jk_seed_state(seed, prefix);
+    if (st == 1 && prefix_damaged(a, prefix)) {
+        /* marker present, but no usable user.reg for the NFS side: the prefix goes aside (never deleted), a fresh seed follows */
+        char aside[1100];
+        int k;
+        for (k = 1; k < 100; k++) {
+            if (k == 1) snprintf(aside, sizeof aside, "%s.old-userreg", prefix);
+            else snprintf(aside, sizeof aside, "%s.old-userreg.%d", prefix, k);
+            if (!jk_fs_exists(aside)) break;
+        }
+        if (k == 100 || jk_fs_rename(prefix, aside) < 0) {
+            snprintf(why, cap, "could not move the damaged Wine prefix aside; it was left untouched");
+            event(a, "prefix: %s", why, NULL);
+            return -1;
+        }
+        event(a, "prefix: user.reg unusable for this game, the Wine prefix was moved aside", NULL, NULL);
+        st = 0;
+    }
+    if (st != 0) return 0;
     const char *roots[] = { app };
     char note[200] = "";
     a->m.prog_done = 0;
     a->m.prog_total = 0;
     int r = jk_seed_import(seed, roots, 1, prefix, on_progress, a, note, sizeof note);
     if (r >= 0) {
+        a->prefix_bad = 0;
         event(a, r == 0 ? "prefix seeded" : "prefix already complete", NULL, NULL);
         if (note[0]) event(a, "prefix: %s", note, NULL);          /* an older seed moved aside */
         return 0;
@@ -472,7 +615,7 @@ static void do_install(JkApp *a)
 {
     if (refuse_two(a, "patch")) return;
     JkPaths p = paths_of(a);
-    if (a->s->require_x360) {                            /* before any write: the pack, installed or found */
+    if (a->s->require_x360 && has_mods(a)) {             /* before any write: the pack, installed or found */
         scan_mods(a);
         if (!(a->m.mods.target & JK_MS_BIT(JK_MOD_X))) {
             a->busy = 1;
@@ -502,8 +645,8 @@ static void do_install(JkApp *a)
     if (r == 0) {
         a->m.fail_kind = JK_FAIL_MODS;
         a->m.mods.npristine_needed = 0;                                /* only this PATCH's own scan counts */
-        r = apply_mods(a, 0, &changed, why, sizeof why);              /* every PATCH: the mods the folders hold */
-        if (r == JK_MS_PENDING) {
+        r = has_mods(a) ? apply_mods(a, 0, &changed, why, sizeof why) : 0;   /* every PATCH: the mods the folders hold (NFS: none) */
+        if (has_mods(a) && r == JK_MS_PENDING) {
             a->m.fail_kind = JK_FAIL_PENDING;
             snprintf(a->pending_why, sizeof a->pending_why, "%s", why);   /* PLAY stays blocked, Patch says it */
         }
@@ -532,7 +675,7 @@ static void do_restore(JkApp *a)
     a->m.mods.nleft = 0;
     /* the mods out first (a file with no unchanged copy stays as it is and is
      * named), then Jk4Speed's own files: Restore never dead-ends */
-    int r = apply_mods(a, 1, &changed, why, sizeof why);
+    int r = has_mods(a) ? apply_mods(a, 1, &changed, why, sizeof why) : 0;
     a->m.restore_left_n = r == 0 ? a->m.mods.nleft : 0;
     memcpy(a->m.restore_left, a->m.mods.left, sizeof a->m.restore_left);
     if (r == JK_MS_PENDING) snprintf(a->pending_why, sizeof a->pending_why, "%s", why);
@@ -573,6 +716,7 @@ static void do_bundle(JkApp *a)
     in.logs_dir = a->s->logs_dir;
     in.runtime_root = a->s->runtime_root;
     in.profiles_dir = a->s->profiles_dir;
+    in.profile_key = a->slot ? a->slot->key : NULL;
     in.usb_dir = a->s->usb_dir;
     in.build_id = a->s->build_id;
     in.local_user = a->s->local_user;
@@ -847,6 +991,35 @@ static void finish(JkApp *a, JkAction action)
         go(a, JK_SCR_PATCH);
         return;
     }
+    if (action == JK_START_GAME && a->slot && a->slot->saves_win) {
+        /* 1.1: this game's saves: the shared prefix's Personal folder points at them (Wine is not running) */
+        char prefix[1024], why[200] = "";
+        int r = prefix_root(a) && jk_fs_join(prefix, sizeof prefix, prefix_root(a), "prefix") == 0
+                ? jk_prefix_set_personal(prefix, a->slot->saves_win, why, sizeof why) : -1;
+        if (r < 0 && a->active == 0) {
+            /* the Black Edition is 1.01's: user.reg was never touched, so a missing or odd one never blocks PLAY */
+            event(a, "saves folder not set (the game starts anyway): %s", why[0] ? why : "no prefix", NULL);
+        } else if (r < 0) {
+            a->prefix_bad = 1;                        /* PATCH sets the prefix up again */
+            event(a, "play refused: saves folder not set: %s", why[0] ? why : "no prefix", NULL);
+            go(a, JK_SCR_PATCH);
+            a->m.phase = JK_PH_FAILED;
+            a->m.no_pristine = 0;
+            a->m.fail_kind = JK_FAIL_PREFIX;
+            snprintf(a->m.msg, sizeof a->m.msg, "Can't set this game's save folder: %s", why[0] ? why : "the Wine prefix was not found");
+            return;
+        }
+        if (r == 0) event(a, "saves folder set: %s", a->slot->saves_win, NULL);
+        if (r >= 0 && a->active != 0 && a->s->game_dir && a->s->game_dir[0] == '/') {
+            /* the original: its Widescreen Fix reads HKCU; seed 1080p and the Black Edition's settings once */
+            char win[600];
+            snprintf(win, sizeof win, "Z:%s", a->s->game_dir);
+            for (char *c = win; *c; c++) if (*c == '/') *c = '\\';
+            int g = jk_prefix_seed_game_key(prefix, win, why, sizeof why);
+            if (g == 0) event(a, "game settings seeded: 1920x1080", NULL, NULL);
+            else if (g < 0) event(a, "game settings not seeded (the game starts anyway): %s", why, NULL);
+        }
+    }
     a->done = 1;
     a->action = action;
     if (action == JK_START_GAME) {
@@ -867,11 +1040,61 @@ static uint32_t pick(uint32_t pressed)
     return 0;
 }
 
+/* 1.1: point everything at side i. The old single fields of the services
+ * become that side's, so the rest of the frontend is unchanged. */
+static void apply_slot(JkApp *a, int i)
+{
+    const JkServices *src = a->src;
+    const JkGameSlot *g = &src->games[i];
+    a->view = *src;
+    a->view.game_dir = g->game_dir;
+    a->view.game_dir_other = g->game_dir_other;
+    a->view.data_root = g->data_root;
+    a->view.saves_dir = g->saves_dir;
+    a->view.require_x360 = g->require_x360;
+    a->view.shared_root = src->shared_root ? src->shared_root : src->games[0].data_root;   /* one prefix for both games */
+    if (i != 0) a->view.old_saves_dir = NULL;                       /* the r3 saves belong to the first game */
+    a->s = &a->view;
+    a->slot = g;
+    a->active = i;
+    JkModel *m = &a->m;
+    m->active = i;
+    m->no_mods = !g->mods;
+    m->exe_any = g->exe_any;
+    m->x360_required = g->require_x360;
+    m->game_dir = g->game_dir;
+    m->game_other = g->game_dir_other && g->game_dir_other[0] ? g->game_dir_other : NULL;
+    char sd[1024];
+    jk_settings_load(state_dir(a, sd, sizeof sd) == 0 ? sd : NULL, &a->set);
+    m->pace = a->set.pace;
+    m->fps_hud = a->set.fps_hud;
+    m->logs_on = a->set.logs;
+}
+
+static void switch_slot(JkApp *a, int i)
+{
+    if (!a->src || a->src->ngames < 2 || i == a->active) return;
+    apply_slot(a, i);
+    a->m.phase = JK_PH_IDLE;
+    a->m.msg[0] = 0;
+    a->m.no_pristine = 0;
+    a->pending_why[0] = 0;
+    memset(&a->m.mods, 0, sizeof a->m.mods);
+    if (a->m.set_focus == JK_SET_MODS && a->m.no_mods) a->m.set_focus = JK_SET_FRAMERATE;
+    open_mods(a);
+    recheck(a);
+    char sd[1024], key[8];
+    if (state_dir_of(a, 0, sd, sizeof sd) == 0) jk_active_save(sd, i);
+    snprintf(key, sizeof key, "%s", a->slot->key);
+    event(a, "game side: %s", key, NULL);
+}
+
 static void press_home(JkApp *a, uint32_t b)
 {
     JkModel *m = &a->m;
     if (b == JK_PAD_UP) m->focus = (m->focus + JK_HOME_COUNT - 1) % JK_HOME_COUNT;
     else if (b == JK_PAD_DOWN) m->focus = (m->focus + 1) % JK_HOME_COUNT;
+    else if (b == JK_PAD_LEFT || b == JK_PAD_RIGHT) switch_slot(a, b == JK_PAD_RIGHT ? 1 : 0);
     else if (b == JK_PAD_SQUARE) open_help(a, jk_two_folders(m) ? JK_HELP_TROUBLE : JK_HELP_FOLDER);
     else if (b == JK_PAD_CROSS) {
         switch (m->focus) {
@@ -890,8 +1113,12 @@ static void press_settings(JkApp *a, uint32_t b)
 {
     JkModel *m = &a->m;
     if (b == JK_PAD_CIRCLE) { go(a, JK_SCR_HOME); m->focus = JK_HOME_SETTINGS; return; }
-    if (b == JK_PAD_UP) { m->set_focus = (m->set_focus + JK_SET_COUNT - 1) % JK_SET_COUNT; return; }
-    if (b == JK_PAD_DOWN) { m->set_focus = (m->set_focus + 1) % JK_SET_COUNT; return; }
+    if (b == JK_PAD_UP || b == JK_PAD_DOWN) {
+        int step = b == JK_PAD_UP ? JK_SET_COUNT - 1 : 1;
+        m->set_focus = (m->set_focus + step) % JK_SET_COUNT;
+        if (m->no_mods && m->set_focus == JK_SET_MODS) m->set_focus = (m->set_focus + step) % JK_SET_COUNT;   /* no MODS row */
+        return;
+    }
     if (m->set_focus == JK_SET_FRAMERATE) {
         if (!jk_pace_enabled(m)) return;
         if (b == JK_PAD_LEFT || b == JK_PAD_RIGHT) set_pace(a, jk_pace_step(m->pace, b == JK_PAD_RIGHT ? 1 : -1));
@@ -1137,7 +1364,9 @@ const JkModel *jk_frontend_model(void) { return running; }
 
 int jk_frontend_run(const JkServices *s, JkDecision *out)
 {
-    if (!s || !out || !s->present || !s->now_ns || !s->sleep_us || !s->game_dir || !s->data_root || !s->files_dir) return -1;
+    if (!s || !out || !s->present || !s->now_ns || !s->sleep_us || !s->files_dir) return -1;
+    if (s->ngames >= 2 ? !s->games[0].game_dir || !s->games[0].data_root || !s->games[1].game_dir || !s->games[1].data_root
+                       : !s->game_dir || !s->data_root) return -1;
     memset(out, 0, sizeof *out);
     JkFrame frame = { malloc((size_t)JK_W * JK_H * 4), JK_W, JK_H, JK_W * 4 };
     if (!frame.pixels) return -1;
@@ -1180,6 +1409,7 @@ int jk_frontend_run(const JkServices *s, JkDecision *out)
     if (rc < 0) return rc;
     out->action = a.action ? a.action : JK_LEAVE_HOME;
     out->pace = a.m.pace;
+    out->game = a.slot ? a.active : 0;
     return 0;
 }
 

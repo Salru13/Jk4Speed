@@ -38,16 +38,29 @@ typedef enum JkState {
 
 /* override_dir: /data/prospero-win/override ("server" lines; shared with every
  * title on the console, so a file found there is always backed up first). */
-typedef struct JkPaths { const char *game_dir, *data_root, *files_dir, *profiles_dir, *override_dir; } JkPaths;
+typedef struct JkPaths {
+    const char *game_dir, *data_root, *files_dir, *profiles_dir, *override_dir;
+    /* 1.1 (JkGameSlot): exe_any 1 accepts any speed.exe (no hash lock; a
+     * missing one is still NO_GAME). profile_key names the composed profile
+     * (<key>.profile); NULL: "nfsmw". Zero keeps the 1.0 behaviour. */
+    int exe_any;
+    const char *profile_key;
+} JkPaths;
 
 typedef struct JkCheck {
     JkState state;
     char found_exe[17];        /* WRONG_EXE: the first 8 hex of the exe's sha256 */
     char first_missing[160];   /* MISSING_FILES: the first missing path */
     int missing_count;
+    int exe_known;             /* speed.exe is the known v1.3 (PE timestamp 0x438e4c8c, image base 0x400000) */
     int has_backup;            /* an install record exists: Restore is possible */
     char reason[160];          /* BAD_PACKAGE: what is wrong (never a full path) */
 } JkCheck;
+
+/* 1 when path is a PE file of the known v1.3 build: TimeDateStamp
+ * 0x438e4c8c and ImageBase 0x400000. Anything else, unreadable or not a PE
+ * file: 0. Never crashes on a garbage file. */
+int jk_exe_is_known_v13(const char *path);
 
 /* Hashes the exe and our files (well under a second for this game). 0 ok. */
 int jk_patch_check(const JkPaths *p, JkCheck *out);

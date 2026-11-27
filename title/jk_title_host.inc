@@ -19,6 +19,7 @@
 #include "jk_frontend.h"
 #include "jk_host.h"
 #include "jk_layout.h"
+#include "jk_strings.h"
 /* Production package (default): no console test hook, no user ini.
  * build_title.sh JK_DEV=1 builds the bench title with both. */
 #ifndef JK_TITLE_PROD
@@ -228,8 +229,24 @@ static void jk_title_launcher(void)
      * (jk_saves_migrate_once); never written. */
     s.old_saves_dir = "/data/prospero-win/prefixes/nfsmw/drive_c/users/prospero/Documents/NFS Most Wanted";
     s.usb_dir = usb;
-    s.build_id = "JK4SPEED 1.0";
+    s.build_id = "JK4SPEED 1.1";
     s.require_x360 = 1;            /* r5: the Xbox 360 Stuff Pack is required; HUD and roads optional */
+    /* 1.1: two games. Slot 0 = NFSMW (Black Edition), exactly the 1.0 fields above;
+     * slot 1 = NFS (the original): any speed.exe, no mods, own data root and saves. */
+    static char nfs_dir[256], nfs_other[256];
+    int found_nfs = jk_game_dir_find_leaf(JK_TITLE_PRODUCT_ROOT, "NFS", nfs_dir, sizeof(nfs_dir), nfs_other,
+                                          sizeof(nfs_other));
+    PS5LOG_LOG("JK4SPEED game folder nfs=%s found=%d", nfs_dir, found_nfs);
+    s.games[0] = (JkGameSlot){ "nfsmw", JK_S_G_BE, "NFSMW", game_dir, s.game_dir_other, data_root,
+                               jk_layout.saves_game, "Z:\\data\\Jk4Speed\\Saves", 0, 1, 1, NULL };
+    /* the original's package folder: the Black Edition's files without the X360 parts, plus
+     * ThirteenAG's Widescreen Fix (make_pkg.sh); missing: its PATCH says "app damaged" */
+    static char nfs_files[220];
+    snprintf(nfs_files, sizeof(nfs_files), "%s-nfs", s.files_dir);
+    s.games[1] = (JkGameSlot){ "nfs", JK_S_G_OG, "NFS", nfs_dir,
+                               found_nfs == -1 && nfs_other[0] ? nfs_other : NULL, jk_layout.system_nfs,
+                               jk_layout.saves_nfs_game, "Z:\\data\\Jk4Speed\\Saves-NFS", 1, 0, 0, nfs_files };
+    s.ngames = 2;
     s.prod = JK_TITLE_PROD;        /* production: no test hook, no user ini */
     /* r5: the badge, from the package's signed file list (jk_release.h);
      * never turns anything off */
@@ -261,12 +278,13 @@ static void jk_title_launcher(void)
     if (decision.action != JK_START_GAME) leave_to_home("jk4speed-launcher-close");
     jk_loader_release();
     jk_frontend_release();
-    if (jk_host_game_exe(game_dir, game_exe, sizeof(game_exe)) != 0) {
-        PS5LOG_LOG("JK4SPEED start refused: game folder path %s", game_dir);
+    const JkGameSlot *play = &s.games[decision.game == 1 ? 1 : 0];
+    if (jk_host_game_exe(play->game_dir, game_exe, sizeof(game_exe)) != 0) {
+        PS5LOG_LOG("JK4SPEED start refused: game folder path %s", play->game_dir);
         leave_to_home("jk4speed-game-path");
     }
     static PwWineApp game;
-    game = (PwWineApp){ JK_TITLE_PROFILE_ID, "JK4SPEED", "", game_exe };
+    game = (PwWineApp){ play->key, "JK4SPEED", "", game_exe };
     PS5LOG_LOG("JK4SPEED start profile=%s exe=%s pace=%d", game.id, game.executable, (int)decision.pace);
     {
         char note[64], stamp[32] = "";

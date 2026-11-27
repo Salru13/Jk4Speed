@@ -51,6 +51,7 @@ static void env_new(Env *e)
     tmp_put(e->game, "TRACKS/STREAML2RA.BUN", "EA road");
     tmp_put(e->game, "FX/COMPILED/car.fx.o", "EA car shader");
     for (int i = 0; i < 4; i++) tmp_put(e->mods, T_PATH[i], T_TEXT[i]);
+    memset(&e->p, 0, sizeof e->p);                      /* JkPaths grew in 1.1: exe_any / profile_key start off */
     e->p.game_dir = e->game; e->p.data_root = e->data; e->p.files_dir = e->pkg; e->p.profiles_dir = e->prof;
 }
 

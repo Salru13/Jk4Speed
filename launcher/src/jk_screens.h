@@ -41,7 +41,7 @@ typedef enum JkPatchPhase { JK_PH_IDLE = 0, JK_PH_INSTALLING, JK_PH_DONE, JK_PH_
  * not; MODS: our files in, the mod files unchanged; PENDING: the mod swap is
  * half done and the next start rolls it back; RESTORE: Restore stopped). */
 typedef enum JkFailKind { JK_FAIL_CORE = 0, JK_FAIL_SEED, JK_FAIL_MODS, JK_FAIL_PENDING, JK_FAIL_RESTORE,
-               JK_FAIL_PENDING_RESTORE, JK_FAIL_DAMAGED } JkFailKind;
+               JK_FAIL_PENDING_RESTORE, JK_FAIL_DAMAGED, JK_FAIL_PREFIX } JkFailKind;
 enum { JK_DLG_NONE = 0, JK_DLG_RESTORE = 1, JK_DLG_IMPORT = 2, JK_DLG_COLLIDE = 3, JK_DLG_PICK = 4, JK_DLG_KEYBOARD = 5 };
 
 /* What ✕ does on the Patch screen. */
@@ -65,6 +65,9 @@ typedef struct JkRelease {
 enum { JK_HOME_X = 150, JK_HOME_Y0 = 290, JK_HOME_STEP = 112, JK_HOME_ITEM_H = 92 };
 /* Settings list layout (seven items above the hint bar). */
 enum { JK_SET_X = 150, JK_SET_Y0 = 262, JK_SET_STEP = 82, JK_SET_ITEM_H = 68 };
+/* The split Home (two games): the two halves, then the menu under them. */
+enum { JK_HALF_X0 = 150, JK_HALF_W = 790, JK_HALF_GAP = 40, JK_HALF_Y = 210, JK_HALF_H = 210,
+       JK_HOME2_Y0 = 456, JK_HOME2_STEP = 92, JK_HOME2_ITEM_H = 84 };
 /* The badge's top-right corner area (tests check it is drawn on every screen). */
 enum { JK_BADGE_RIGHT = 1794, JK_BADGE_Y = 58 };
 
@@ -122,6 +125,13 @@ typedef struct JkModel {
     int ctl_focus;                /* the focused function (JkCtlAction) */
     int ctl_listen;               /* 1: waiting for the button to capture */            /* r5: the pack row is locked ON (no arrows) */
     int siren;                    /* 0..256: the focus bar's red/blue cross-fade */
+    /* 1.1 two games: ngames 0 or 1 = the old single-game screens; 2 = the split Home */
+    int ngames, active;           /* active: the chosen side (0 NFSMW Black Edition, 1 NFS original) */
+    int slot_state[2];            /* JkState of each side, for the Home halves */
+    const char *slot_label[2];    /* "MOST WANTED - BLACK EDITION" ... (NULL: none) */
+    const char *slot_dir[2];      /* each side's game folder, shown on its half */
+    int no_mods;                  /* 1: the active game has no mods (NFS): no MODS row, no mods on Patch */
+    int exe_any;                  /* 1: the active game takes any speed.exe (check.exe_known says if it is v1.3) */
 } JkModel;
 
 void jk_screen_draw(JkFrame *f, const JkModel *m);
@@ -144,6 +154,9 @@ const char *jk_settings_label(int item);
 const char *jk_settings_value(const JkModel *m, int item);
 /* A Help page's name. */
 const char *jk_help_title(int page);
+/* Its paragraphs: how many, and the words of one for the active game (NFS side: its folder and saves paths). */
+int jk_help_count(int page);
+const char *jk_help_text(const JkModel *m, int page, int i);
 int jk_patch_can_restore(const JkModel *m);
 /* □ on Patch opens Mods (the game must be usable and nothing failed). */
 int jk_patch_can_mods(const JkModel *m);
