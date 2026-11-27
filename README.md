@@ -16,7 +16,7 @@ JK4SPEED is a PS4 app with its own launcher, the Wine runtime for the console fr
 
 The Home screen is split in two. Press **left / right** to pick a side; **PLAY**, **PATCH** and **SETTINGS** then work for the side you picked. **ABOUT** is shared.
 
-| | Left: **MOST WANTED · BLACK EDITION** | Right: **MOST WANTED · ORIGINAL** |
+| | Left: **BLACK EDITION · 360 LOOK** | Right: **MOST WANTED · ORIGINAL LOOK** |
 |---|---|---|
 | Look | The **Xbox 360 look** (Xbox 360 Stuff Pack, optional HD HUD and HD roads) | The **original PC look**: the game's own colours, roads and shadows, no mods |
 | Game folder | `/data/Jk4Speed/NFSMW` | `/data/Jk4Speed/NFS` |
@@ -27,6 +27,8 @@ The Home screen is split in two. Press **left / right** to pick a side; **PLAY**
 | Saves | `/data/Jk4Speed/Saves` | `/data/Jk4Speed/Saves-NFS` (kept apart) |
 
 You can use one side or both. The two sides never share game files, settings or saves: you can even put the same PC copy in both folders and play it either way.
+
+Tested on a PS4 with both editions on the right side: the Black Edition and the regular edition (v1.3) start in 1080p widescreen with the 30/60 pacer, and their saves go to `Saves-NFS`.
 
 ## Where everything goes
 
@@ -229,8 +231,8 @@ above. Forks are welcome under the code licences, but they must not call themsel
 
 ### Which side should I pick?
 
-- **Left, MOST WANTED · BLACK EDITION:** the Xbox 360 look (colours, lighting and effects of the Xbox 360 version, optional HD HUD and HD roads). Needs PC v1.3 Black Edition and the Xbox 360 Stuff Pack download.
-- **Right, MOST WANTED · ORIGINAL:** the game as it looks on PC (its own yellow-tinted colours, roads and shadows), in 16:9 widescreen and 1080p. Works with the Black Edition or the regular edition, and needs no mod downloads.
+- **Left, BLACK EDITION · 360 LOOK:** the Xbox 360 look (colours, lighting and effects of the Xbox 360 version, optional HD HUD and HD roads). Needs PC v1.3 Black Edition and the Xbox 360 Stuff Pack download.
+- **Right, MOST WANTED · ORIGINAL LOOK:** the game as it looks on PC (its own yellow-tinted colours, roads and shadows), in 16:9 widescreen and 1080p. Works with the Black Edition or the regular edition, and needs no mod downloads.
 
 You can set up both and switch on the Home screen with left / right.
 

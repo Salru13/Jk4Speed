@@ -10,8 +10,8 @@
 #define JK_S_GAME_DIR "/data/Jk4Speed/NFSMW"
 #define JK_S_GAME_DIR_NFS "/data/Jk4Speed/NFS"
 /* 1.1: the two games on Home */
-#define JK_S_G_BE "MOST WANTED \xC2\xB7 BLACK EDITION"
-#define JK_S_G_OG "MOST WANTED \xC2\xB7 ORIGINAL"
+#define JK_S_G_BE "BLACK EDITION \xC2\xB7 360 LOOK"          /* owner 2026-11-27: what each side looks like */
+#define JK_S_G_OG "MOST WANTED \xC2\xB7 ORIGINAL LOOK"
 #define JK_S_H_COPY_HERE "COPY THE GAME HERE"
 #define JK_S_HS_READY "READY"
 #define JK_S_HS_PATCH "PATCH NEEDED"

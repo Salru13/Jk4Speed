@@ -2,8 +2,8 @@
 
 ## Which side should I pick?
 
-- **Left, MOST WANTED · BLACK EDITION:** the Xbox 360 look (colours, lighting and effects of the Xbox 360 version, optional HD HUD and HD roads). Needs PC v1.3 Black Edition and the Xbox 360 Stuff Pack download.
-- **Right, MOST WANTED · ORIGINAL:** the game as it looks on PC (its own yellow-tinted colours, roads and shadows), in 16:9 widescreen and 1080p. Works with the Black Edition or the regular edition, and needs no mod downloads.
+- **Left, BLACK EDITION · 360 LOOK:** the Xbox 360 look (colours, lighting and effects of the Xbox 360 version, optional HD HUD and HD roads). Needs PC v1.3 Black Edition and the Xbox 360 Stuff Pack download.
+- **Right, MOST WANTED · ORIGINAL LOOK:** the game as it looks on PC (its own yellow-tinted colours, roads and shadows), in 16:9 widescreen and 1080p. Works with the Black Edition or the regular edition, and needs no mod downloads.
 
 You can set up both and switch on the Home screen with left / right. PLAY, PATCH and SETTINGS act on the side you picked.
 

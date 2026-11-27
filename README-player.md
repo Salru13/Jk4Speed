@@ -6,7 +6,7 @@ JK4SPEED runs your own copy of Need for Speed Most Wanted (PC) on a PS4. It is a
 
 The Home screen is split in two. **Left / right** on the D-pad picks a side; **PLAY**, **PATCH** and **SETTINGS** work for the side you picked. **About** is shared.
 
-| | Left: **MOST WANTED · BLACK EDITION** | Right: **MOST WANTED · ORIGINAL** |
+| | Left: **BLACK EDITION · 360 LOOK** | Right: **MOST WANTED · ORIGINAL LOOK** |
 |---|---|---|
 | Look | The Xbox 360 look | The original PC look, in 16:9 widescreen and 1080p |
 | Game folder | `/data/Jk4Speed/NFSMW` | `/data/Jk4Speed/NFS` |
