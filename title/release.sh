@@ -77,6 +77,9 @@ pack)
     say "badge check (as the launcher does it)"
     L="$REL/launcher"; T=$(mktemp -d)
     cp -a "$OUT/pkg-stage" "$T/app"
+    # the launcher PRX goes into the package from reloc-build (files.tsv), not from the stage: put it where
+    # the console has it, so this check covers every listed file as the launcher sees them
+    cp "$OUT/reloc-build/prx/relocated_wine_app.prx" "$T/app/sce_module/relocated_wine_app.prx"
     cat > "$T/v.c" <<'EOF'
 #include "jk_release.h"
 #include "jk_release_key.h"

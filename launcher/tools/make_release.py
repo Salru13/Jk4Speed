@@ -4,8 +4,11 @@
 """Writes <app_root>/jk4speed-files/release.txt (src/jk_release.h format) over a
 staged package tree: eboot.bin, sce_sys/param.sfo and every file under
 jk4speed-files/ and jk4speed-files-nfs/ except release.txt/release.sig.
-  python3 make_release.py APP_ROOT BUILD_ID [--eboot PATH]
---eboot: hash eboot.bin from PATH (make_pkg.sh keeps it outside the stage)."""
+  python3 make_release.py APP_ROOT BUILD_ID [--eboot PATH] [--add REL=SRC]...
+--eboot: hash eboot.bin from PATH (make_pkg.sh keeps it outside the stage).
+--add: also list REL (its path under /app0) with the sha256 of SRC. 1.10: the launcher
+(sce_module/relocated_wine_app.prx) and the native DXVK server (sce_module/dxvknative.prx),
+as JKPro lists them (console 2026-11-26: Official Build), so the badge covers our code too."""
 import hashlib, os, sys
 
 def sha(p):
@@ -32,11 +35,22 @@ def main():
             if os.path.islink(os.path.join(d, n)):
                 continue
             rels.append(rel)
+    extra = {}
+    for i, a in enumerate(sys.argv):
+        if a == '--add':
+            spec = sys.argv[i + 1]
+            rel, _, src = spec.partition('=')
+            if not rel or not src or '..' in rel or rel.startswith('/') or '\\' in rel:
+                sys.exit('make_release: bad --add ' + spec)
+            if not os.path.isfile(src):
+                sys.exit('make_release: --add source missing: ' + src)
+            extra[rel] = src
+    rels.extend(extra)
     lines = ['JK4SPEED-RELEASE 1', 'build ' + build]
     for rel in sorted(set(rels)):
         if '..' in rel or rel.startswith('/'):
             sys.exit('make_release: bad path ' + rel)
-        src = eboot if rel == 'eboot.bin' and eboot else os.path.join(root, rel)
+        src = extra.get(rel) or (eboot if rel == 'eboot.bin' and eboot else os.path.join(root, rel))
         lines.append('%s  %s' % (sha(src), rel))
     with open(os.path.join(base, 'release.txt'), 'w', newline='\n') as f:
         f.write('\n'.join(lines) + '\n')

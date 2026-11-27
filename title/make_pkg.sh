@@ -225,7 +225,12 @@ fi   # end of the stage part (JK_PKG_PHASE=pack starts here)
 [ -d "$STAGE/jk4speed-files" ] || die "no stage: run with JK_PKG_PHASE=stage first"
 
 say "release list (Official Build badge, launcher/src/jk_release.h)"
-python3 -I "$launcher/tools/make_release.py" "$STAGE" "JK4SPEED 1.1" --eboot "$OUT/reloc-build/eboot.bin"
+# 1.10: the list also covers our code at its installed paths, as JKPro's does (console 2026-11-26:
+# Official Build): the launcher PRX and the native DXVK server. eboot.bin stays out (the PS4 rewrites it).
+python3 -I "$launcher/tools/make_release.py" "$STAGE" "JK4SPEED 1.1" --eboot "$OUT/reloc-build/eboot.bin" \
+    --add "sce_module/relocated_wine_app.prx=$OUT/reloc-build/prx/relocated_wine_app.prx" \
+    --add "sce_module/dxvknative.prx=$STAGE/sce_module/dxvknative.prx"
+grep -q '  sce_module/relocated_wine_app.prx$' "$STAGE/jk4speed-files/release.txt" || die "the release list does not cover the launcher"
 REL_KEEP="${JK_RELEASE_DIR:-$HOME/jk4-build/release-sign}/jk4speed-files"
 if [ -n "${JK_RELEASE_SIG:-}" ]; then
     # the owner signed an earlier, identical release.txt (tools/sign_release.sh)
