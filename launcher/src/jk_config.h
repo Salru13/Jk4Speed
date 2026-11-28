@@ -61,6 +61,9 @@ typedef struct JkConfigIn {
     /* 1.1: the game's profile key ("nfsmw" or "nfs"; NULL: "nfsmw"). The
      * profile is <profiles_dir>/<key>.profile with "id = <key>". */
     const char *profile_key;
+    /* 1.11 SETTINGS > VISUALS (the Xbox 360 look), or NULL: the base's line. The value of
+     * the base's DXVK_PS4_NFS_SHADOW_DETAIL and envmap_faces lines (jk_visuals.h). */
+    const char *shadow_detail, *envmap_faces;
 } JkConfigIn;
 
 /* -> <game_dir>/jk4speed-dev.ini (CRLF). 0 ok; <0 with a short reason (no

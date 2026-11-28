@@ -79,6 +79,26 @@ Choose it in **Settings > Frame rate**:
 - **30 FPS** (default): races run at an even 30 frames per second. The smoothest.
 - **60 FPS**: races run at up to 60 frames per second, less even.
 
+## Your own look: Settings > Visuals (left side only)
+
+**Left side only** (BLACK EDITION · 360 LOOK). **SETTINGS > VISUALS** has **23 sliders** for the colours, light, shadows and reflections of the Xbox 360 look, so you can set the picture the way you like it.
+
+- **Up / down** picks a slider, **left / right** changes it, **△ Default look** puts every slider back, **○** goes back.
+- A change is saved at once and is used from the next **PLAY**. **No PATCH needed**: PATCH once, then change the sliders and play as often as you like.
+- **(FPS)** after a name marks a slider that can lower the frame rate. Turn several of them on and 60 FPS may not hold; at 30 FPS there is more room.
+
+| Group | Sliders |
+|---|---|
+| Colour and light | Brightness, Fixed light level, Bloom colour, Soft bloom (FPS), Car lighting, Sun flare |
+| Shadows | Sunset shadows, Shadow height, Shadow detail (FPS), Car self-shadow |
+| Reflections | Car reflection update (FPS), Reflection distance (FPS), Mirror distance (FPS), Mirror from reflection (FPS), Cars in all reflections (FPS) |
+| Effects | Motion blur (FPS), Motion blur strength, Turning blur, Depth of field (FPS), Soft depth of field (FPS), Grass (FPS), Parallax surfaces, Traffic and cop detail (FPS) |
+
+- **Car reflection update** sets how fast the reflections on your car follow the world. **1** (the default, made for 60 FPS) renders one of the six sides of the reflection per frame; **6** renders all six every frame, so the reflections are live. **Above 1, 30 FPS is recommended on the PS4 Slim and the original PS4.**
+- The **default look is exactly the 1.10 look**: if you never open VISUALS, nothing changes.
+- 21 sliders are the look settings of the Xbox 360 Stuff Pack's own `X360Stuff.ini` (by its authors); two are JK4SPEED's own (Shadow detail, Car reflection update). JK4SPEED writes your values into the game folder only when you press PLAY and puts the installed file back when it opens, so PATCH never reports changed files. The HD HUD and HD Road Textures are not affected.
+- The right side (original look) has no VISUALS: it stays the PC game as it is.
+
 ## Mods (left side only)
 
 The right side (original look) uses no mods. Mods are not part of Jk4Speed. Download each one from its author's page (Settings > Mods shows where, and `MODS.md` lists them) and put the downloads, unchanged and still zipped, in one of these folders:

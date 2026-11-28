@@ -12,6 +12,7 @@
 #include "jk_seed.h"
 #include "jk_strings.h"
 #include "jk_support.h"
+#include "jk_visuals.h"
 
 #include <dirent.h>
 #include <stdio.h>
@@ -123,6 +124,12 @@ static void compose(JkApp *a)
     in.backup_dir = jk_fs_join(backup, sizeof backup, a->s->data_root, "backup") == 0 ? backup : NULL;   /* a bench ini, once */
     char sd[1024];
     in.state_dir = state_dir(a, sd, sizeof sd) == 0 ? sd : NULL;                  /* composed.txt: what we last wrote */
+    static JkVisuals vis;                                                           /* 1.11 SETTINGS > VISUALS (360 look) */
+    if (has_mods(a)) {
+        jk_visuals_load(in.state_dir, &vis);
+        in.shadow_detail = jk_visuals_shadow_detail(&vis);
+        in.envmap_faces = jk_visuals_envmap_faces(&vis);
+    }
     if (jk_config_write_ini(&in, why, sizeof why) < 0) event(a, "config: ini not written: %s", why, NULL);
     JkControls ctl;                                                                 /* SETTINGS > CONTROLS */
     jk_controls_load(in.state_dir, &ctl);
@@ -190,6 +197,7 @@ static int seed_state(const JkApp *a)
 static void refresh_slots(JkApp *a);
 static void apply_slot(JkApp *a, int i);
 static void open_mods(JkApp *a);
+static void visuals_reset_all(JkApp *a);
 
 static void check_now(JkApp *a)
 {
@@ -318,6 +326,7 @@ static const char *screen_name(const JkModel *m)
     case JK_SCR_PATCH: return "patch";
     case JK_SCR_SETTINGS: return "settings";
     case JK_SCR_CONTROLS: return "controls";
+    case JK_SCR_VISUALS: return "visuals";
     case JK_SCR_SAVES: return "saves";
     case JK_SCR_LOGS: return "logs";
     case JK_SCR_ABOUT: return "about";
@@ -439,6 +448,7 @@ int jk_app_init(JkApp *a, const JkServices *s, JkFrame *frame)
     a->s = s;
     a->src = s;
     a->frame = frame;
+    visuals_reset_all(a);                              /* 1.11: the installed X360Stuff.ini back first */
     int mods_opened = 0;                               /* two sides: both journals were looked at above */
     if (s->ngames >= 2) {                              /* 1.1: pick the side to open on, then act as for the only game */
         char sd[1024];
@@ -903,6 +913,30 @@ static void press_controls(JkApp *a, uint32_t b)
     else if (b == JK_PAD_TRIANGLE) { jk_controls_default(&m->controls); controls_save(a); }
 }
 
+/* SETTINGS > VISUALS: up/down a slider (wrapping), left/right its value, triangle the
+ * defaults, circle back. Saved at once; the ini keys are composed at once, X360Stuff.ini at PLAY. */
+static void visuals_save(JkApp *a)
+{
+    char sd[1024];
+    if (state_dir(a, sd, sizeof sd) == 0 && jk_visuals_save(sd, &a->m.vis) == 0) {
+        char line[96];
+        snprintf(line, sizeof line, "%s=%s", jk_visuals_key(a->m.vis_focus), jk_visuals_value(&a->m.vis, a->m.vis_focus));
+        event(a, "visuals saved (last: %s)", line, NULL);
+    }
+    compose(a);
+}
+
+static void press_visuals(JkApp *a, uint32_t b)
+{
+    JkModel *m = &a->m;
+    if (b == JK_PAD_CIRCLE) { back_to_settings(a); return; }
+    if (b == JK_PAD_UP) m->vis_focus = (m->vis_focus + JK_VIS_N - 1) % JK_VIS_N;
+    else if (b == JK_PAD_DOWN) m->vis_focus = (m->vis_focus + 1) % JK_VIS_N;
+    else if (b == JK_PAD_LEFT || b == JK_PAD_RIGHT) {
+        if (jk_visuals_step(&m->vis, m->vis_focus, b == JK_PAD_RIGHT ? 1 : -1)) visuals_save(a);
+    } else if (b == JK_PAD_TRIANGLE) { jk_visuals_default(&m->vis); visuals_save(a); }
+}
+
 static void press_mods(JkApp *a, uint32_t b)
 {
     JkModel *m = &a->m;
@@ -967,6 +1001,37 @@ static void set_logs(JkApp *a, int on)
     }
 }
 
+/* 1.11 VISUALS: the X360 Stuff ini carries the player's values only while the game runs.
+ * PLAY writes them in (after the checks); the launcher's next open writes the installed
+ * file back before anything looks at the game folder, so the mod check only ever sees the
+ * pinned file. A file that is not ours is never touched (jk_visuals_write_x360). */
+static void visuals_x360(JkApp *a, const char *game_dir, const JkVisuals *v, const char *what)
+{
+    char why[200] = "";
+    int r = game_dir ? jk_visuals_write_x360(game_dir, v, why, sizeof why) : 0;
+    if (r != 0) event(a, "visuals: %s: %s", what, why);
+}
+
+static void visuals_at_play(JkApp *a)
+{
+    if (!has_mods(a) || jk_two_folders(&a->m)) return;
+    char sd[1024];
+    JkVisuals v;
+    jk_visuals_load(state_dir(a, sd, sizeof sd) == 0 ? sd : NULL, &v);
+    visuals_x360(a, a->s->game_dir, &v, "play");
+}
+
+static void visuals_reset_all(JkApp *a)
+{
+    JkVisuals d;
+    jk_visuals_default(&d);
+    const JkServices *s = a->src;
+    if (s->ngames >= 2) {
+        for (int i = 0; i < 2; i++)
+            if (s->games[i].mods) visuals_x360(a, s->games[i].game_dir, &d, "open");
+    } else visuals_x360(a, s->game_dir, &d, "open");
+}
+
 static void do_clear_logs(JkApp *a)
 {
     a->busy = 1;
@@ -1024,6 +1089,7 @@ static void finish(JkApp *a, JkAction action)
     a->action = action;
     if (action == JK_START_GAME) {
         compose(a);                                   /* the game reads the ini and the profile as written now */
+        visuals_at_play(a);
         event(a, "start pace=%s", jk_pace_key(a->m.pace), NULL);
     }
 }
@@ -1080,7 +1146,7 @@ static void switch_slot(JkApp *a, int i)
     a->m.no_pristine = 0;
     a->pending_why[0] = 0;
     memset(&a->m.mods, 0, sizeof a->m.mods);
-    if (a->m.set_focus == JK_SET_MODS && a->m.no_mods) a->m.set_focus = JK_SET_FRAMERATE;
+    if ((a->m.set_focus == JK_SET_MODS || a->m.set_focus == JK_SET_VISUALS) && a->m.no_mods) a->m.set_focus = JK_SET_FRAMERATE;
     open_mods(a);
     recheck(a);
     char sd[1024], key[8];
@@ -1116,7 +1182,8 @@ static void press_settings(JkApp *a, uint32_t b)
     if (b == JK_PAD_UP || b == JK_PAD_DOWN) {
         int step = b == JK_PAD_UP ? JK_SET_COUNT - 1 : 1;
         m->set_focus = (m->set_focus + step) % JK_SET_COUNT;
-        if (m->no_mods && m->set_focus == JK_SET_MODS) m->set_focus = (m->set_focus + step) % JK_SET_COUNT;   /* no MODS row */
+        while (m->no_mods && (m->set_focus == JK_SET_MODS || m->set_focus == JK_SET_VISUALS))
+            m->set_focus = (m->set_focus + step) % JK_SET_COUNT;           /* no MODS, no VISUALS row */
         return;
     }
     if (m->set_focus == JK_SET_FRAMERATE) {
@@ -1134,6 +1201,13 @@ static void press_settings(JkApp *a, uint32_t b)
     if (b != JK_PAD_CROSS) return;
     switch (m->set_focus) {
     case JK_SET_MODS: a->mods_back = JK_SCR_SETTINGS; go(a, JK_SCR_MODS); break;
+    case JK_SET_VISUALS: {
+        char sd[1024];
+        jk_visuals_load(state_dir(a, sd, sizeof sd) == 0 ? sd : NULL, &a->m.vis);
+        a->m.vis_focus = 0;
+        go(a, JK_SCR_VISUALS);
+        break;
+    }
     case JK_SET_CONTROLS: {
         char sd[1024];
         jk_controls_load(state_dir(a, sd, sizeof sd) == 0 ? sd : NULL, &a->m.controls);
@@ -1319,6 +1393,7 @@ int jk_app_press(JkApp *a, uint32_t pressed)
     case JK_SCR_PATCH: press_patch(a, b); break;
     case JK_SCR_SETTINGS: press_settings(a, b); break;
     case JK_SCR_CONTROLS: press_controls(a, b); break;
+    case JK_SCR_VISUALS: press_visuals(a, b); break;
     case JK_SCR_ABOUT:
         if (b == JK_PAD_CIRCLE) back_to_settings(a);
         else if (b == JK_PAD_SQUARE) go(a, JK_SCR_CREDITS);

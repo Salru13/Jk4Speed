@@ -177,6 +177,42 @@ static void user_ini_overrides(void)
     tmp_rm_rf(d);
 }
 
+/* 1.11 VISUALS > Shadow detail: the base's DXVK_PS4_NFS_SHADOW_DETAIL line gets the
+ * slider's value; NULL (and the default "2") leave the ini exactly as before. */
+static void visuals_shadow_detail_in_ini(void)
+{
+    char d[256], buf[8192], plain[8192];
+    tmp_dir(d, sizeof d);
+    JkConfigIn in;
+    cfg_real(&in, d, BASE_DIR);
+    char why[200];
+    CHECK_EQ(jk_config_write_ini(&in, why, sizeof why), 0);
+    int n0 = read_ini(&in, plain, sizeof plain);
+    CHECK(n0 > 0 && has_line(plain, "DXVK_PS4_NFS_SHADOW_DETAIL=2"));
+    in.shadow_detail = "2";
+    CHECK_EQ(jk_config_write_ini(&in, why, sizeof why), 0);
+    CHECK(read_ini(&in, buf, sizeof buf) == n0 && !strcmp(buf, plain));
+    in.shadow_detail = "0";
+    CHECK_EQ(jk_config_write_ini(&in, why, sizeof why), 0);
+    CHECK(read_ini(&in, buf, sizeof buf) > 0);
+    CHECK(has_line(buf, "DXVK_PS4_NFS_SHADOW_DETAIL=0"));
+    CHECK(!has_line(buf, "DXVK_PS4_NFS_SHADOW_DETAIL=2"));
+    CHECK(has_line(buf, "DXVK_PS4_NFS_SHADOWS_NV=0"));             /* the other keys as they were */
+    CHECK(has_line(buf, "envmap_faces = 1"));
+    /* VISUALS > Car reflection update: the base's envmap_faces line; "1" = as before */
+    in.shadow_detail = NULL;
+    in.envmap_faces = "1";
+    CHECK_EQ(jk_config_write_ini(&in, why, sizeof why), 0);
+    CHECK(read_ini(&in, buf, sizeof buf) == n0 && !strcmp(buf, plain));
+    in.envmap_faces = "6";
+    CHECK_EQ(jk_config_write_ini(&in, why, sizeof why), 0);
+    CHECK(read_ini(&in, buf, sizeof buf) > 0);
+    CHECK(has_line(buf, "envmap_faces = 6"));
+    CHECK(!has_line(buf, "envmap_faces = 1"));
+    CHECK(has_line(buf, "DXVK_PS4_NFS_SHADOW_DETAIL=2"));
+    tmp_rm_rf(d);
+}
+
 /* CONTROLS remap: the profile's [input] binds and Xidi.ini follow the
  * player's layout; the defaults give today's release files exactly. */
 static void controls_compose_profile_and_xidi(void)
@@ -601,6 +637,7 @@ int main(void)
     RUN(ini_without_base_fails_and_writes_nothing);
     RUN(foreign_ini_backed_up_once);
     RUN(user_ini_overrides);
+    RUN(visuals_shadow_detail_in_ini);
     RUN(controls_compose_profile_and_xidi);
     RUN(profile_release_has_no_diag_no_trace);
     RUN(profile_fps_on);

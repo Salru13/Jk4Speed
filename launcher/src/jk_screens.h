@@ -19,17 +19,19 @@
 #include "jk_keyboard.h"
 #include "jk_ui.h"
 #include "jk_controls.h"
+#include "jk_visuals.h"
 
 #include <stddef.h>
 #include <stdint.h>
 
 typedef enum JkScreenId {
     JK_SCR_HOME = 0, JK_SCR_PATCH, JK_SCR_SETTINGS, JK_SCR_CONTROLS, JK_SCR_SAVES, JK_SCR_LOGS,
-    JK_SCR_ABOUT, JK_SCR_FAILED, JK_SCR_MODS, JK_SCR_CREDITS, JK_SCR_HELP, JK_SCR_INTERRUPTED, JK_SCR_SETUP
+    JK_SCR_ABOUT, JK_SCR_FAILED, JK_SCR_MODS, JK_SCR_CREDITS, JK_SCR_HELP, JK_SCR_INTERRUPTED, JK_SCR_SETUP,
+    JK_SCR_VISUALS                /* 1.11 SETTINGS > VISUALS */
 } JkScreenId;
 typedef enum JkHomeItem { JK_HOME_PLAY = 0, JK_HOME_PATCH, JK_HOME_SETTINGS, JK_HOME_COUNT } JkHomeItem;
 typedef enum JkSetItem {
-    JK_SET_FRAMERATE = 0, JK_SET_FPS_HUD, JK_SET_MODS, JK_SET_CONTROLS, JK_SET_SAVES, JK_SET_LOGS, JK_SET_ABOUT, JK_SET_COUNT
+    JK_SET_FRAMERATE = 0, JK_SET_FPS_HUD, JK_SET_MODS, JK_SET_VISUALS, JK_SET_CONTROLS, JK_SET_SAVES, JK_SET_LOGS, JK_SET_ABOUT, JK_SET_COUNT
 } JkSetItem;
 /* LOGS & SUPPORT rows */
 typedef enum JkLogItem { JK_LOG_ENABLE = 0, JK_LOG_CLEAR, JK_LOG_BUNDLE, JK_LOG_COUNT } JkLogItem;
@@ -123,6 +125,8 @@ typedef struct JkModel {
     int x360_required;
     JkControls controls;          /* SETTINGS > CONTROLS: the layout shown and edited */
     int ctl_focus;                /* the focused function (JkCtlAction) */
+    JkVisuals vis;                /* 1.11 SETTINGS > VISUALS: the sliders shown and edited */
+    int vis_focus;                /* the focused slider (JkVisItem) */
     int ctl_listen;               /* 1: waiting for the button to capture */            /* r5: the pack row is locked ON (no arrows) */
     int siren;                    /* 0..256: the focus bar's red/blue cross-fade */
     /* 1.1 two games: ngames 0 or 1 = the old single-game screens; 2 = the split Home */

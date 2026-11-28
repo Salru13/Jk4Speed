@@ -88,7 +88,7 @@ base=$B
 out=$OUT
 export PATH="\$base/native248-build-wine/tools:\$base/private-bin:\$base/deps/rootfs/usr/bin:\$PATH"
 export MESA_BUILD=\$base/native248-platform
-export TITLE_ID=$TITLE_ID TITLE=JK4SPEED PW_BUILD_ID=JK4SPEED-1.1-$TITLE_ID PKG_VERSION=01.10
+export TITLE_ID=$TITLE_ID TITLE=JK4SPEED PW_BUILD_ID=JK4SPEED-1.11-$TITLE_ID PKG_VERSION=01.11
 export PW_ROOT="\$out/prospero" PW_APP_OBJ="\$out/app-obj" PW_BUILD_ROOT="\$out/reloc-build"
 export PW_MODULE_STUBS_DIR="$UROOT/sce_module"
 export PW_EBOOT_NO_RELRO=1 PW_SPLIT_RUNTIME=0 PW_WINE64_WAIT_WATCHDOG=0 PW_WINE64_SERVER_DIRECT_OFF=0 PW_WINE64_HEAP_FLEXIBLE=0

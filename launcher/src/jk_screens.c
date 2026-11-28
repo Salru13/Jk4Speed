@@ -408,6 +408,7 @@ static const char *settings_description(const JkModel *m)
         return m->pace == JK_PACE_60 ? JK_S_D_FPS_60 : m->pace == JK_PACE_OTHER ? JK_S_D_FPS_OTHER : JK_S_D_FPS_30;
     case JK_SET_FPS_HUD: return JK_S_D_FPS_HUD;
     case JK_SET_MODS: return JK_S_D_MODS;
+    case JK_SET_VISUALS: return JK_S_D_VISUALS;
     case JK_SET_CONTROLS: return JK_S_D_CONTROLS;
     case JK_SET_SAVES: return JK_S_D_SAVES;
     case JK_SET_LOGS: return JK_S_D_LOGS;
@@ -417,7 +418,7 @@ static const char *settings_description(const JkModel *m)
 
 const char *jk_settings_label(int item)
 {
-    static const char *const labels[JK_SET_COUNT] = { JK_S_FRAMERATE, JK_S_FPS_HUD, JK_S_MODS, JK_S_CONTROLS, JK_S_SAVES, JK_S_LOGS, JK_S_ABOUT };
+    static const char *const labels[JK_SET_COUNT] = { JK_S_FRAMERATE, JK_S_FPS_HUD, JK_S_MODS, JK_S_VISUALS, JK_S_CONTROLS, JK_S_SAVES, JK_S_LOGS, JK_S_ABOUT };
     return item >= 0 && item < JK_SET_COUNT ? labels[item] : "";
 }
 
@@ -434,7 +435,7 @@ const char *jk_settings_value(const JkModel *m, int item)
 enum { SET_PX = 1000, SET_PW = 810 };
 static void settings_panel(JkFrame *f, const JkModel *m)
 {
-    int py = JK_SET_Y0, ph = (JK_SET_COUNT - 1 - (m->no_mods ? 1 : 0)) * JK_SET_STEP + JK_SET_ITEM_H;
+    int py = JK_SET_Y0, ph = (JK_SET_COUNT - 1 - (m->no_mods ? 2 : 0)) * JK_SET_STEP + JK_SET_ITEM_H;
     int on = m->set_focus == JK_SET_FPS_HUD ? m->fps_hud : m->set_focus == JK_SET_FRAMERATE ? jk_pace_enabled(m) : 1;
     panel(f, SET_PX, py, SET_PW, ph, on ? JK_RGB_DUSK : JK_RGB_SMOKE);
     int x = SET_PX + 44, w = SET_PW - 88, y = py + 30;
@@ -462,7 +463,7 @@ static void draw_settings(JkFrame *f, const JkModel *m)
     int row = 0;
     for (int i = 0; i < JK_SET_COUNT; i++) {
         int fps = i == JK_SET_FRAMERATE, hud = i == JK_SET_FPS_HUD;
-        if (m->no_mods && i == JK_SET_MODS) continue;                  /* NFS: no mods, no row */
+        if (m->no_mods && (i == JK_SET_MODS || i == JK_SET_VISUALS)) continue;   /* NFS: no mods, no look rows */
         menu_row(f, m, JK_FONT_HEAD, JK_SET_X, JK_SET_Y0 + row++ * JK_SET_STEP, JK_SET_ITEM_H, jk_settings_label(i), m->set_focus == i,
                  fps ? pace_on : 1, jk_settings_value(m, i), JK_SET_X + 400,
                  fps ? m->pace != JK_PACE_30 : hud ? m->fps_hud : 0, fps ? m->pace != JK_PACE_60 : hud ? !m->fps_hud : 0);
@@ -528,6 +529,42 @@ static void draw_controls(JkFrame *f, const JkModel *m)
         Hint h[3] = { { JK_BTN_CROSS, JK_S_H_CHANGE }, { JK_BTN_TRIANGLE, JK_S_H_DEFAULT }, { JK_BTN_CIRCLE, JK_S_H_BACK } };
         hint_bar(f, h, 3, m->build_id);
     }
+}
+
+/* ------------------------------------------------------------------ */
+/* Visuals (1.11): the Xbox 360 look's sliders, a scrolling list       */
+/* ------------------------------------------------------------------ */
+
+enum { VIS_ROWS = 12 };
+static void draw_visuals(JkFrame *f, const JkModel *m)
+{
+    chrome(f, m);
+    page_title(f, JK_S_VISUALS);
+    panel(f, 150, PANEL_Y, 1660, PANEL_H, JK_RGB_SMOKE);
+    int lh = jk_font_line_height(JK_FONT_BODY);
+    const int x = 194, rw = 1100, step = 47, y0 = PANEL_Y + 30;
+    int top = m->vis_focus - VIS_ROWS / 2;                 /* the focused slider in the middle when it can be */
+    if (top > JK_VIS_N - VIS_ROWS) top = JK_VIS_N - VIS_ROWS;
+    if (top < 0) top = 0;
+    for (int r = 0; r < VIS_ROWS && top + r < JK_VIS_N; r++) {
+        int i = top + r, y = y0 + r * step, focused = m->vis_focus == i;
+        if (focused) {
+            jk_plate(f, x - 24, y - 4, 12, lh + 8, JK_RGB_DUSK, 255);
+            jk_plate(f, x - 6, y - 4, rw, lh + 8, JK_RGB_ASPHALT, 255);
+        }
+        jk_text(f, JK_FONT_BODY, x + 10, y, jk_visuals_label(i), JK_RGB_CHALK);
+        char val[64];
+        if (focused) snprintf(val, sizeof val, "\xE2\x80\xB9 %s \xE2\x80\xBA", jk_visuals_shown(&m->vis, i));
+        else snprintf(val, sizeof val, "%s", jk_visuals_shown(&m->vis, i));
+        jk_text(f, JK_FONT_BODY, x + 640, y, val, focused ? JK_RGB_CHALK : JK_RGB_DUSK);
+    }
+    char pos[16];
+    snprintf(pos, sizeof pos, "%d / %d", m->vis_focus + 1, JK_VIS_N);
+    jk_text(f, JK_FONT_HINT, x + rw + 40, y0, pos, JK_RGB_SMOKE);
+    wrap(f, JK_FONT_HINT, x + rw + 40, y0 + 60, 1760 - (x + rw + 40), jk_visuals_about(m->vis_focus), JK_RGB_CHALK);
+    Hint h[4] = { { JK_BTN_LEFTRIGHT, JK_S_H_CHANGE }, { JK_BTN_UPDOWN, JK_S_H_CHOOSE },
+                  { JK_BTN_TRIANGLE, JK_S_H_VIS_DEFAULT }, { JK_BTN_CIRCLE, JK_S_H_BACK } };
+    hint_bar(f, h, 4, m->build_id);
 }
 
 /* ------------------------------------------------------------------ */
@@ -1314,6 +1351,7 @@ void jk_screen_draw(JkFrame *f, const JkModel *m)
     case JK_SCR_PATCH: draw_patch(f, m); break;
     case JK_SCR_SETTINGS: draw_settings(f, m); break;
     case JK_SCR_CONTROLS: draw_controls(f, m); break;
+    case JK_SCR_VISUALS: draw_visuals(f, m); break;
     case JK_SCR_SAVES: draw_saves(f, m); break;
     case JK_SCR_LOGS: draw_logs(f, m); break;
     case JK_SCR_HELP: draw_help(f, m); break;

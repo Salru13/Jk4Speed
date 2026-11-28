@@ -6,6 +6,7 @@
 #include "jk_tmp.h"
 #include "jk_frontend.h"
 #include "jk_controls.h"
+#include "jk_visuals.h"
 #include "jk_fs.h"
 #include "jk_sha256.h"
 #include "jk_savefx.h"
@@ -297,6 +298,76 @@ static void play_composes_xidi_from_controls(void)
     CHECK(tmp_get(e.game, "Xidi.ini", buf, sizeof buf) > 0);
     CHECK(strstr(buf, "ButtonA = Button(1)") != NULL);
     CHECK(strstr(buf, "TriggerRT = Null") != NULL);
+    tmp_rm_rf(e.root);
+}
+
+/* 1.11 SETTINGS > VISUALS (Xbox 360 look): ↑↓ a slider (wraps), ←→ its value, saved at
+ * once (the ini keys composed at once too), △ the defaults, ○ back to the VISUALS row. */
+static void visuals_sliders_save_and_reset(void)
+{
+    Env e; env_new(&e, 1, 1);
+    char st[400], buf[8192];
+    snprintf(st, sizeof st, "%s/state", e.data);
+    jk_app_init(&app, &e.s, NULL);
+    open_settings();
+    while (app.m.set_focus != JK_SET_VISUALS) press(JK_PAD_DOWN);
+    CHECK_EQ(app.m.set_focus, JK_SET_VISUALS);
+    press(JK_PAD_CROSS);
+    CHECK_EQ(app.m.screen, JK_SCR_VISUALS);
+    CHECK_EQ(app.m.vis_focus, JK_VIS_BRIGHTNESS);
+    press(JK_PAD_RIGHT);
+    JkVisuals v;
+    jk_visuals_load(st, &v);
+    CHECK(!strcmp(jk_visuals_value(&v, JK_VIS_BRIGHTNESS), "0.22"));
+    CHECK(!strcmp(jk_visuals_value(&app.m.vis, JK_VIS_BRIGHTNESS), "0.22"));
+    press(JK_PAD_UP);                                      /* wraps to the last slider */
+    CHECK_EQ(app.m.vis_focus, JK_VIS_N - 1);
+    while (app.m.vis_focus != JK_VIS_REFLECTIONS) press(JK_PAD_UP);
+    press(JK_PAD_RIGHT);                                   /* 2 faces */
+    jk_visuals_load(st, &v);
+    CHECK(!strcmp(jk_visuals_envmap_faces(&v), "2"));
+    CHECK(tmp_get(e.game, "jk4speed-dev.ini", buf, sizeof buf) > 0 && strstr(buf, "\r\nenvmap_faces = 2\r\n"));
+    press(JK_PAD_TRIANGLE);                                /* the defaults */
+    jk_visuals_load(st, &v);
+    CHECK(jk_visuals_is_default(&v));
+    CHECK(tmp_get(e.game, "jk4speed-dev.ini", buf, sizeof buf) > 0 && strstr(buf, "\r\nenvmap_faces = 1\r\n"));
+    press(JK_PAD_CIRCLE);
+    CHECK_EQ(app.m.screen, JK_SCR_SETTINGS);
+    CHECK_EQ(app.m.set_focus, JK_SET_VISUALS);
+    tmp_rm_rf(e.root);
+}
+
+/* The game folder's X360Stuff.ini carries the player's values only from PLAY; the
+ * launcher puts the installed file back when it opens, so the mod check never sees a
+ * changed file. Someone else's X360Stuff.ini is never touched. */
+static void visuals_x360_at_play_only(void)
+{
+    Env e; env_new(&e, 1, 1);
+    char path[600], sha[65];
+    snprintf(path, sizeof path, "%s/scripts/X360Stuff.ini", e.game);
+    CHECK_EQ(jk_fs_mkdir_parent(path), 0);
+    if (!jk_fs_exists(JK_ROOT_DIR "/../bench/x360/X360Stuff.ini")) {   /* a mod file: not in the public repository */
+        printf("  skip: no bench/x360/X360Stuff.ini\n");
+        tmp_rm_rf(e.root);
+        return;
+    }
+    CHECK_EQ(jk_fs_copy_checked(JK_ROOT_DIR "/../bench/x360/X360Stuff.ini", path, JK_VIS_X360_SHA), 0);
+    tmp_put(e.data, "state/visuals.txt", "MiddleGrayValue 0.14\nMotionBlur 1\n");
+    jk_app_init(&app, &e.s, NULL);
+    CHECK(jk_fs_sha256(path, sha, NULL) == 0 && !strcmp(sha, JK_VIS_X360_SHA));   /* not before PLAY */
+    press(JK_PAD_CROSS);
+    CHECK(app.done);
+    CHECK_EQ(app.action, JK_START_GAME);
+    char *t = jk_fs_read(path, 64 * 1024, NULL);
+    CHECK(t && strstr(t, "\r\nMiddleGrayValue = 0.14\r\n") && strstr(t, "\r\nMotionBlur = 1\r\n"));
+    free(t);
+    jk_app_init(&app, &e.s, NULL);                         /* back from the game: the installed file again */
+    CHECK(jk_fs_sha256(path, sha, NULL) == 0 && !strcmp(sha, JK_VIS_X360_SHA));
+    CHECK_EQ(app.m.check.state, JK_ST_READY);
+    tmp_put(e.game, "scripts/X360Stuff.ini", "MiddleGrayValue = 0.5\r\n");          /* not ours */
+    press(JK_PAD_CROSS);
+    char buf[64];
+    CHECK(tmp_get(e.game, "scripts/X360Stuff.ini", buf, sizeof buf) > 0 && !strcmp(buf, "MiddleGrayValue = 0.5\r\n"));
     tmp_rm_rf(e.root);
 }
 
@@ -914,9 +985,9 @@ static void run_bad_arguments(void)
 static void screen_names_reported(void)
 {
     Env e; env_new(&e, 1, 1);
-    static const uint32_t script[] = { JK_PAD_DOWN, JK_PAD_DOWN, JK_PAD_CROSS, JK_PAD_DOWN, JK_PAD_DOWN, JK_PAD_DOWN,
-                                       JK_PAD_CROSS, JK_PAD_CIRCLE, JK_PAD_CIRCLE };   /* Settings: Frame rate, Show FPS, Mods, Controls */
-    e.script = script; e.script_n = 9; e.quit_after = 9;
+    static const uint32_t script[] = { JK_PAD_DOWN, JK_PAD_DOWN, JK_PAD_CROSS, JK_PAD_DOWN, JK_PAD_DOWN, JK_PAD_DOWN, JK_PAD_DOWN,
+                                       JK_PAD_CROSS, JK_PAD_CIRCLE, JK_PAD_CIRCLE };   /* Settings: Frame rate, Show FPS, Mods, Visuals, Controls */
+    e.script = script; e.script_n = 10; e.quit_after = 10;
     JkDecision d;
     jk_frontend_run(&e.s, &d);
     CHECK(e.screens_n >= 5);
@@ -1127,9 +1198,9 @@ static void settings_order_and_defaults(void)
 {
     Env e; env_new(&e, 1, 1);
     jk_app_init(&app, &e.s, NULL);
-    CHECK_EQ(JK_SET_COUNT, 7);
-    CHECK_EQ(JK_SET_FRAMERATE, 0); CHECK_EQ(JK_SET_FPS_HUD, 1); CHECK_EQ(JK_SET_MODS, 2); CHECK_EQ(JK_SET_CONTROLS, 3);
-    CHECK_EQ(JK_SET_SAVES, 4); CHECK_EQ(JK_SET_LOGS, 5); CHECK_EQ(JK_SET_ABOUT, 6);
+    CHECK_EQ(JK_SET_COUNT, 8);
+    CHECK_EQ(JK_SET_FRAMERATE, 0); CHECK_EQ(JK_SET_FPS_HUD, 1); CHECK_EQ(JK_SET_MODS, 2); CHECK_EQ(JK_SET_VISUALS, 3);
+    CHECK_EQ(JK_SET_CONTROLS, 4); CHECK_EQ(JK_SET_SAVES, 5); CHECK_EQ(JK_SET_LOGS, 6); CHECK_EQ(JK_SET_ABOUT, 7);
     CHECK_EQ(app.m.fps_hud, 0);                        /* Show FPS / ms: OFF */
     CHECK_EQ(app.m.logs_on, 0);
     open_set_item(JK_SET_LOGS);
@@ -1749,7 +1820,7 @@ static void nfs_no_mods(void)
     press(JK_PAD_DOWN);
     CHECK_EQ(app.m.set_focus, JK_SET_FPS_HUD);
     press(JK_PAD_DOWN);
-    CHECK_EQ(app.m.set_focus, JK_SET_CONTROLS);        /* no MODS row */
+    CHECK_EQ(app.m.set_focus, JK_SET_CONTROLS);        /* no MODS row, no VISUALS row */
     press(JK_PAD_UP);
     CHECK_EQ(app.m.set_focus, JK_SET_FPS_HUD);
     press(JK_PAD_CIRCLE);
@@ -2285,6 +2356,8 @@ int main(void)
     RUN(prod_ignores_devtools_and_user_ini);
     RUN(play_composes_xidi_from_controls);
     RUN(controls_capture_and_reset);
+    RUN(visuals_sliders_save_and_reset);
+    RUN(visuals_x360_at_play_only);
     RUN(frame_rate_disabled_before_install);
     RUN(patch_composes_with_players_settings);
     RUN(settings_items_open_and_circle_returns);

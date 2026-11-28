@@ -2,7 +2,7 @@
 
 # JK4SPEED
 
-Play your own PC copy of **Need for Speed: Most Wanted (2005)** on a PS4 with GoldHEN. **Two games in one launcher:** the Black Edition with the Xbox 360 look, and the original PC look in widescreen.
+Play your own PC copy of **Need for Speed: Most Wanted (2005)** on a PS4 with GoldHEN. **Two games in one launcher:** the Black Edition with the Xbox 360 look, and the original PC look in widescreen. **New in 1.11:** set your own Xbox 360 look with 23 sliders in SETTINGS > VISUALS.
 
 [![release](https://img.shields.io/github/v/release/Salru13/Jk4Speed)](https://github.com/Salru13/Jk4Speed/releases/latest)
 [![downloads](https://img.shields.io/github/downloads/Salru13/Jk4Speed/total?label=downloads)](https://github.com/Salru13/Jk4Speed/releases)
@@ -24,11 +24,32 @@ The Home screen is split in two. Press **left / right** to pick a side; **PLAY**
 | Mods | Xbox 360 Stuff Pack (required), Upscaled HUD and HD Road Textures (optional) | None: you need **no mod downloads** at all |
 | What JK4SPEED adds | Its runtime files, the Xbox 360 look built from the pack | Its runtime files and ThirteenAG's **Widescreen Fix** (included): **16:9 widescreen**, HUD and movies placed for 16:9, **1080p from the first start** |
 | Frame rate | 30 or 60 FPS (SETTINGS) | 30 or 60 FPS (SETTINGS) |
+| Look settings | **SETTINGS > VISUALS**: 23 sliders for colours, light, shadows and reflections (new in 1.11) | None: the PC game as it is |
 | Saves | `/data/Jk4Speed/Saves` | `/data/Jk4Speed/Saves-NFS` (kept apart) |
 
 You can use one side or both. The two sides never share game files, settings or saves: you can even put the same PC copy in both folders and play it either way.
 
 Tested on a PS4 with both editions on the right side: the Black Edition and the regular edition (v1.3) start in 1080p widescreen with the 30/60 pacer, and their saves go to `Saves-NFS`.
+
+## Your own look: SETTINGS > VISUALS (new in 1.11)
+
+**Left side only** (BLACK EDITION · 360 LOOK). **SETTINGS > VISUALS** has **23 sliders** for the colours, light, shadows and reflections of the Xbox 360 look, so you can set the picture the way you like it.
+
+- **Up / down** picks a slider, **left / right** changes it, **△ Default look** puts every slider back, **○** goes back.
+- A change is saved at once and is used from the next **PLAY**. **No PATCH needed**: PATCH once, then change the sliders and play as often as you like.
+- **(FPS)** after a name marks a slider that can lower the frame rate. Turn several of them on and 60 FPS may not hold; at 30 FPS there is more room.
+
+| Group | Sliders |
+|---|---|
+| Colour and light | Brightness, Fixed light level, Bloom colour, Soft bloom (FPS), Car lighting, Sun flare |
+| Shadows | Sunset shadows, Shadow height, Shadow detail (FPS), Car self-shadow |
+| Reflections | Car reflection update (FPS), Reflection distance (FPS), Mirror distance (FPS), Mirror from reflection (FPS), Cars in all reflections (FPS) |
+| Effects | Motion blur (FPS), Motion blur strength, Turning blur, Depth of field (FPS), Soft depth of field (FPS), Grass (FPS), Parallax surfaces, Traffic and cop detail (FPS) |
+
+- **Car reflection update** sets how fast the reflections on your car follow the world. **1** (the default, made for 60 FPS) renders one of the six sides of the reflection per frame; **6** renders all six every frame, so the reflections are live. **Above 1, 30 FPS is recommended on the PS4 Slim and the original PS4.**
+- The **default look is exactly the 1.10 look**: if you never open VISUALS, nothing changes.
+- 21 sliders are the look settings of the Xbox 360 Stuff Pack's own `X360Stuff.ini` (by its authors, see [CREDITS.md](CREDITS.md)); two are JK4SPEED's own (Shadow detail, Car reflection update). JK4SPEED writes your values into the game folder only when you press PLAY and puts the installed file back when it opens, so PATCH never reports changed files. The HD HUD and HD Road Textures are not affected.
+- The right side (original look) has no VISUALS: it stays the PC game as it is.
 
 ## Where everything goes
 
@@ -91,7 +112,7 @@ The JK4SPEED launcher opens first. Its Home screen shows both games side by side
 |---|---|
 | **PLAY** | Starts the picked game. |
 | **PATCH** | Checks the picked game's folder and installs the JK4SPEED files. Anything it replaces is backed up first, and **Restore** puts it back. **Left side:** it also builds the mod files from the archives in `/data/Jk4Speed/Mods` (or `USB:/Jk4Speed/`); `SETTINGS > MODS` (or `PATCH > □ Mods`): the Xbox 360 Stuff Pack is **REQUIRED**, the Upscaled HUD and HD Road Textures each have an ON / OFF switch (ON by default); the first PATCH takes a few minutes (the pack is about 1 GB). **Right side:** it installs the runtime files and the Widescreen Fix, and moves aside other fixes from a PC install (Fusion Fix, Extra Options) so only the widescreen picture changes the game; Restore puts them back. |
-| **SETTINGS** | For the picked game: **FRAME RATE**, **SHOW FPS / MS**, **MODS** (left side only), **CONTROLS** (controller layout), **SAVE GAMES**, **LOGS & SUPPORT** (Enable logs, Clear logs, Save support bundle) and **ABOUT**. |
+| **SETTINGS** | For the picked game: **FRAME RATE**, **SHOW FPS / MS**, **MODS** (left side only), **VISUALS** (left side only: your own look, see [above](#your-own-look-settings--visuals-new-in-111)), **CONTROLS** (controller layout), **SAVE GAMES**, **LOGS & SUPPORT** (Enable logs, Clear logs, Save support bundle) and **ABOUT**. |
 
 On the game's title screen, wait until "Please press START" has fully faded in before you press ✕.
 
@@ -319,6 +340,22 @@ On the Patch screen press the triangle button (**Restore backup**). It removes t
 - a `jk4speed-dev.ini` you changed by hand after Jk4Speed wrote it.
 
 The game will not start from here until you install again.
+
+### How do the VISUALS sliders work? Do I need to Patch?
+
+Left side only. PATCH once as usual, then open **SETTINGS > VISUALS**, change what you like and press **PLAY**. Every change is saved at once and is used from the next PLAY; you never need PATCH for VISUALS. The game reads the values when it starts, so to try another value: quit the game, change it in VISUALS, PLAY again. **△ Default look** gives the 1.10 look back. A slider marked **(FPS)** can lower the frame rate; **Car reflection update** above 1 works best at 30 FPS on the PS4 Slim and the original PS4. You can set VISUALS before the first PATCH too: the values are used from the first PLAY after it.
+
+### How do I update from 1.10?
+
+Install the new `.pkg` over the old one with GoldHEN; you do not need to uninstall first. It is a full package, not an update that needs an older version. Your games, mods, saves and settings in `/data/Jk4Speed/` stay as they are, and you can PLAY at once: the files PATCH installs did not change in 1.11.
+
+### How do I remove JK4SPEED completely?
+
+1. In JK4SPEED, pick each side and press **Restore backup** on the Patch screen (triangle). This puts your original game files back.
+2. Uninstall JK4SPEED from the PS4 menu. This removes the app only, not `/data/Jk4Speed/`.
+3. If you want, delete `/data/Jk4Speed/System` over FTP (the Windows files, cache and backups). Your game folders, `Mods` and `Saves` can stay.
+
+Do step 1 first: the backups of your original files are in `System`, so deleting it before Restore leaves the Xbox 360 files in your game folder (then copy the game in again).
 
 ### Do settings change my game folder before the first Patch?
 

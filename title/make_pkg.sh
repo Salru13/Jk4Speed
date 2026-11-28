@@ -185,7 +185,7 @@ SFO="$STAGE/sce_sys/param.sfo"
 "$PKGTOOL" sfo_new "$SFO" >/dev/null
 set_sfo() { "$PKGTOOL" sfo_setentry --value "$3" --type "$2" ${4:+--maxsize "$4"} "$SFO" "$1" >/dev/null; }
 set_sfo APP_TYPE integer 1
-set_sfo APP_VER utf8 01.10 8
+set_sfo APP_VER utf8 01.11 8
 set_sfo ATTRIBUTE integer 0x00010000
 set_sfo CATEGORY utf8 gd 4
 set_sfo CONTENT_ID utf8 "$CONTENT_ID" 48
@@ -196,7 +196,7 @@ set_sfo PUBTOOLVER integer 0x02890000
 set_sfo SYSTEM_VER integer 0
 set_sfo TITLE utf8 JK4SPEED 128
 set_sfo TITLE_ID utf8 "$TITLE_ID" 12
-set_sfo VERSION utf8 01.10 8
+set_sfo VERSION utf8 01.11 8
 "$PKGTOOL" sfo_listentries "$SFO" | tee "$OUT/param-sfo.txt"
 
 say "licences and player pages"
@@ -227,7 +227,7 @@ fi   # end of the stage part (JK_PKG_PHASE=pack starts here)
 say "release list (Official Build badge, launcher/src/jk_release.h)"
 # 1.10: the list also covers our code at its installed paths, as JKPro's does (console 2026-11-26:
 # Official Build): the launcher PRX and the native DXVK server. eboot.bin stays out (the PS4 rewrites it).
-python3 -I "$launcher/tools/make_release.py" "$STAGE" "JK4SPEED 1.1" --eboot "$OUT/reloc-build/eboot.bin" \
+python3 -I "$launcher/tools/make_release.py" "$STAGE" "JK4SPEED 1.11" --eboot "$OUT/reloc-build/eboot.bin" \
     --add "sce_module/relocated_wine_app.prx=$OUT/reloc-build/prx/relocated_wine_app.prx" \
     --add "sce_module/dxvknative.prx=$STAGE/sce_module/dxvknative.prx"
 grep -q '  sce_module/relocated_wine_app.prx$' "$STAGE/jk4speed-files/release.txt" || die "the release list does not cover the launcher"

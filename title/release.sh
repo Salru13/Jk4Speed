@@ -13,12 +13,12 @@
 #                                            (OFFICIAL), copy the PKG to evidence/release/
 #
 # Env: JK_REPO (default: this checkout), JK_REL_DIR (default ~/jk4-build/rel),
-#      JK_REL_VERSION (default 1.10). Nothing is sent to a console or to GitHub.
+#      JK_REL_VERSION (default 1.11). Nothing is sent to a console or to GitHub.
 set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"
 REPO="${JK_REPO:-$(cd "$here/../.." && pwd)}"
 REL="${JK_REL_DIR:-$HOME/jk4-build/rel}"
-VER="${JK_REL_VERSION:-1.10}"
+VER="${JK_REL_VERSION:-1.11}"
 B="${JK_BOOTSTRAP:-$HOME/orbis-win-host-bootstrap}"
 OUT="${JK_TITLE_OUT:-$B/jk4speed-title-r4}"
 SIGN_DIR="${JK_RELEASE_DIR:-$HOME/jk4-build/release-sign}"

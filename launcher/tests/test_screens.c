@@ -212,13 +212,13 @@ static void footer_on_every_home_state(void)
     free(bg.pixels); free(f.pixels);
 }
 
-/* Settings: seven items in the brief's order; Show FPS / ms reads OFF by default. */
+/* Settings: eight items in the brief's order (1.11: VISUALS after MODS); Show FPS / ms reads OFF by default. */
 static void settings_labels_in_order(void)
 {
-    static const char *const want[] = { "FRAME RATE", "SHOW FPS / MS", "MODS", "CONTROLS", "SAVE GAMES", "LOGS & SUPPORT", "ABOUT" };
-    CHECK_EQ(JK_SET_COUNT, 7);
-    for (int i = 0; i < 7; i++) CHECK(!strcmp(jk_settings_label(i), want[i]));
-    CHECK(JK_SET_Y0 + 6 * JK_SET_STEP + JK_SET_ITEM_H < 940);          /* the list clears the hint bar */
+    static const char *const want[] = { "FRAME RATE", "SHOW FPS / MS", "MODS", "VISUALS", "CONTROLS", "SAVE GAMES", "LOGS & SUPPORT", "ABOUT" };
+    CHECK_EQ(JK_SET_COUNT, 8);
+    for (int i = 0; i < 8; i++) CHECK(!strcmp(jk_settings_label(i), want[i]));
+    CHECK(JK_SET_Y0 + 7 * JK_SET_STEP + JK_SET_ITEM_H < 940);          /* the list clears the hint bar */
     JkModel m = case_base(JK_SCR_SETTINGS, JK_ST_READY);
     CHECK(!strcmp(jk_settings_value(&m, JK_SET_FPS_HUD), "OFF"));
     m.fps_hud = 1;

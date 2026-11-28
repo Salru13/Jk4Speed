@@ -229,7 +229,7 @@ static void jk_title_launcher(void)
      * (jk_saves_migrate_once); never written. */
     s.old_saves_dir = "/data/prospero-win/prefixes/nfsmw/drive_c/users/prospero/Documents/NFS Most Wanted";
     s.usb_dir = usb;
-    s.build_id = "JK4SPEED 1.1";
+    s.build_id = "JK4SPEED 1.11";
     s.require_x360 = 1;            /* r5: the Xbox 360 Stuff Pack is required; HUD and roads optional */
     /* 1.1: two games. Slot 0 = NFSMW (Black Edition), exactly the 1.0 fields above;
      * slot 1 = NFS (the original): any speed.exe, no mods, own data root and saves. */

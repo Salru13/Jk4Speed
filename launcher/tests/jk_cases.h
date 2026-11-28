@@ -23,6 +23,7 @@ static JkModel case_base(JkScreenId s, JkState st)
     m.check.state = st;
     m.pace = JK_PACE_30;
     jk_controls_default(&m.controls);
+    jk_visuals_default(&m.vis);
     m.build_id = "JK4SPEED 1.0";
     m.saves_profiles = -1;
     m.release.state = JK_REL_UNOFFICIAL;          /* no signing yet: what every build shows today */
@@ -216,6 +217,17 @@ static int jk_cases(JkCase *out)
     out[n++] = (JkCase){ "settings-mods-focus", m };
     m = case_base(JK_SCR_SETTINGS, JK_ST_READY); m.set_focus = JK_SET_SAVES;
     out[n++] = (JkCase){ "settings-saves-focus", m };
+    m = case_base(JK_SCR_SETTINGS, JK_ST_READY); m.set_focus = JK_SET_VISUALS;
+    out[n++] = (JkCase){ "settings-visuals-focus", m };
+    /* 1.11 VISUALS: the first slider changed and focused; then the list scrolled to the end */
+    m = case_base(JK_SCR_VISUALS, JK_ST_READY);
+    jk_visuals_step(&m.vis, JK_VIS_BRIGHTNESS, -1);
+    out[n++] = (JkCase){ "visuals", m };
+    m = case_base(JK_SCR_VISUALS, JK_ST_READY); m.vis_focus = JK_VIS_REFLECTIONS;
+    jk_visuals_step(&m.vis, JK_VIS_REFLECTIONS, +1);
+    out[n++] = (JkCase){ "visuals-reflections", m };
+    m = case_base(JK_SCR_VISUALS, JK_ST_READY); m.vis_focus = JK_VIS_N - 1;
+    out[n++] = (JkCase){ "visuals-end", m };
 
     m = case_base(JK_SCR_CONTROLS, JK_ST_READY);
     out[n++] = (JkCase){ "controls", m };

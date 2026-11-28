@@ -255,6 +255,17 @@ static int build_ini(const JkConfigIn *in, Buf *out, char *why, size_t cap)
         int over = -1;
         for (int i = 0; k && i < nuser; i++) if (!strcasecmp(k, user[i].key)) over = i;
         if (over >= 0) { put(&b, user[over].line, "\r\n"); user[over].used = 1; continue; }
+        char vis[96];                                 /* 1.11 VISUALS: the slider's value on the base's line */
+        if (k && in->shadow_detail && !strcasecmp(k, "DXVK_PS4_NFS_SHADOW_DETAIL")) {
+            snprintf(vis, sizeof vis, "DXVK_PS4_NFS_SHADOW_DETAIL=%s", in->shadow_detail);
+            put(&b, vis, "\r\n");
+            continue;
+        }
+        if (k && in->envmap_faces && !strcasecmp(k, "envmap_faces")) {
+            snprintf(vis, sizeof vis, "envmap_faces = %s", in->envmap_faces);
+            put(&b, vis, "\r\n");
+            continue;
+        }
         put(&b, s, "\r\n");
     }
     if (!header) { put(&b, "[jk4speed]", "\r\n"); ini_keys(&b, in); }

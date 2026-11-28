@@ -95,6 +95,22 @@ On the Patch screen press the triangle button (**Restore backup**). It removes t
 
 The game will not start from here until you install again.
 
+## How do the VISUALS sliders work? Do I need to Patch?
+
+Left side only. PATCH once as usual, then open **SETTINGS > VISUALS**, change what you like and press **PLAY**. Every change is saved at once and is used from the next PLAY; you never need PATCH for VISUALS. The game reads the values when it starts, so to try another value: quit the game, change it in VISUALS, PLAY again. **△ Default look** gives the 1.10 look back. A slider marked **(FPS)** can lower the frame rate; **Car reflection update** above 1 works best at 30 FPS on the PS4 Slim and the original PS4. You can set VISUALS before the first PATCH too: the values are used from the first PLAY after it.
+
+## How do I update from 1.10?
+
+Install the new `.pkg` over the old one with GoldHEN; you do not need to uninstall first. It is a full package, not an update that needs an older version. Your games, mods, saves and settings in `/data/Jk4Speed/` stay as they are, and you can PLAY at once: the files PATCH installs did not change in 1.11.
+
+## How do I remove JK4SPEED completely?
+
+1. In JK4SPEED, pick each side and press **Restore backup** on the Patch screen (triangle). This puts your original game files back.
+2. Uninstall JK4SPEED from the PS4 menu. This removes the app only, not `/data/Jk4Speed/`.
+3. If you want, delete `/data/Jk4Speed/System` over FTP (the Windows files, cache and backups). Your game folders, `Mods` and `Saves` can stay.
+
+Do step 1 first: the backups of your original files are in `System`, so deleting it before Restore leaves the Xbox 360 files in your game folder (then copy the game in again).
+
 ## Do settings change my game folder before the first Patch?
 
 No. Settings you change before the first Patch are saved and used from the first Patch on. Nothing is written into your game folder until you press Patch.
